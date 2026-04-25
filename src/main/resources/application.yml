@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: hermes-finance-backend
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/hermes}
+    username: ${DATABASE_USERNAME:hermes}
+    password: ${DATABASE_PASSWORD:hermes}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: ${DB_POOL_NAME:HermesHikariPool}
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    time-zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+  password:
+    pepper: ${ARGON2_PEPPER}
+    argon2:
+      memory-kb: ${ARGON2_MEMORY:65536}
+      iterations: ${ARGON2_ITERATIONS:3}
+      parallelism: ${ARGON2_PARALLELISM:2}
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+logging:
+  level:
+    root: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+logging:
+  level:
+    root: INFO

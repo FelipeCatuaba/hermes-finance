@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:hermes_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+
+security:
+  cors:
+    allowed-origins: http://localhost:5173
+
+logging:
+  level:
+    root: WARN

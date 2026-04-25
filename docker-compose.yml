@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: hermes-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hermes}
+      POSTGRES_USER: ${POSTGRES_USER:-hermes}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hermes}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - hermes-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  hermes-postgres-data:
