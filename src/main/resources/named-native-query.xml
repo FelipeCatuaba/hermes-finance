@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<queries>
+    <query name="user.insert"><![CDATA[
+        INSERT INTO users (id, email, name, password, role, active, created_at, updated_at)
+        VALUES (:id, :email, :name, :password, :role, :active, :createdAt, :updatedAt)
+    ]]></query>
+
+    <query name="user.findByEmail"><![CDATA[
+        SELECT id, email, name, password, role, active, created_at, updated_at
+        FROM users
+        WHERE email = :email
+        LIMIT 1
+    ]]></query>
+</queries>

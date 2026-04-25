@@ -10,29 +10,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 @Configuration
-@EnableTransactionManagement
 public class DatabaseConfig {
 
-    @Value("${spring.datasource.url}")
-    private String url;
-
-    @Value("${spring.datasource.username}")
-    private String username;
-
-    @Value("${spring.datasource.password}")
-    private String password;
-    
-    @Bean("dataSource")
+    @Bean
     @Primary
     @ConfigurationProperties("spring.datasource.hikari")
     public HikariDataSource hikariDataSource(DataSourceProperties properties) {
-    val dataSource = properties.initializeDataSourceBuilder()
+        return properties.initializeDataSourceBuilder()
             .type(HikariDataSource.class)
             .build();
-    dataSource.setJdbcUrl(url);
-    dataSource.setUsername(username);
-    dataSource.setPassword(password);
-    return dataSource;    
     }
 
     @Bean
