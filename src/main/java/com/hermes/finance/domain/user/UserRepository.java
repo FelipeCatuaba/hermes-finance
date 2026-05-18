@@ -57,4 +57,20 @@ public class UserRepository {
 
         return jdbcTemplate.query(sql, params, userRowMapper).stream().findFirst();
     }
+
+    public Optional<User> findById(UUID id) {
+        String sql = nativeQueryCatalog.get("user.findById");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", id);
+        return jdbcTemplate.query(sql, params, userRowMapper).stream().findFirst();
+    }
+
+    public void updatePassword(UUID id, String password) {
+        String sql = nativeQueryCatalog.get("user.updatePassword");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("password", password)
+            .addValue("updatedAt", OffsetDateTime.now());
+        jdbcTemplate.update(sql, params);
+    }
 }

@@ -52,4 +52,10 @@
         WHERE user_id = :userId
           AND revoked = FALSE
     ]]></query>
+
+    <query name="">
+        SELECT 1
+    </query>
+
+    <query name="invalid.blank.sql">   </query>
 </queries>

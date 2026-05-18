@@ -31,4 +31,37 @@ class UserRepositoryTest {
         assertThat(found).isPresent();
         assertThat(found.get().getEmail()).isEqualTo("felipe@email.com");
     }
+
+    @Test
+    void shouldFindUserById() {
+        User user = new User();
+        user.setName("Ana");
+        user.setEmail("ana@email.com");
+        user.setPassword("hashed-password");
+        user.setRole("OWNER");
+        user.setActive(true);
+        User saved = userRepository.save(user);
+
+        Optional<User> found = userRepository.findById(saved.getId());
+
+        assertThat(found).isPresent();
+        assertThat(found.get().getId()).isEqualTo(saved.getId());
+    }
+
+    @Test
+    void shouldUpdatePassword() {
+        User user = new User();
+        user.setName("Mario");
+        user.setEmail("mario@email.com");
+        user.setPassword("old-password");
+        user.setRole("OWNER");
+        user.setActive(true);
+        User saved = userRepository.save(user);
+
+        userRepository.updatePassword(saved.getId(), "new-password");
+        Optional<User> updated = userRepository.findById(saved.getId());
+
+        assertThat(updated).isPresent();
+        assertThat(updated.get().getPassword()).isEqualTo("new-password");
+    }
 }
