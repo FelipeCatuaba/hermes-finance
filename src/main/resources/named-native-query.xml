@@ -1,55 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <queries>
     <query name="user.insert"><![CDATA[
-        INSERT INTO users (id, email, name, password, role, active, created_at, updated_at)
-        VALUES (:id, :email, :name, :password, :role, :active, :createdAt, :updatedAt)
+        INSERT INTO users (id, clerk_id, email, name, created_at, updated_at)
+        VALUES (:id, :clerkId, :email, :name, :createdAt, :updatedAt)
     ]]></query>
 
-    <query name="user.findByEmail"><![CDATA[
-        SELECT id, email, name, password, role, active, created_at, updated_at
+    <query name="user.findByClerkId"><![CDATA[
+        SELECT id, clerk_id, email, name, created_at, updated_at
         FROM users
-        WHERE email = :email
+        WHERE clerk_id = :clerkId
         LIMIT 1
     ]]></query>
 
     <query name="user.findById"><![CDATA[
-        SELECT id, email, name, password, role, active, created_at, updated_at
+        SELECT id, clerk_id, email, name, created_at, updated_at
         FROM users
         WHERE id = :id
         LIMIT 1
     ]]></query>
 
-    <query name="user.updatePassword"><![CDATA[
+    <query name="user.updateProfile"><![CDATA[
         UPDATE users
-        SET password = :password,
+        SET email      = :email,
+            name       = :name,
             updated_at = :updatedAt
-        WHERE id = :id
+        WHERE clerk_id = :clerkId
     ]]></query>
 
-    <query name="refreshToken.insert"><![CDATA[
-        INSERT INTO refresh_tokens (id, user_id, token, expires_at, revoked, created_at)
-        VALUES (:id, :userId, :token, :expiresAt, :revoked, :createdAt)
-    ]]></query>
-
-    <query name="refreshToken.findActiveByToken"><![CDATA[
-        SELECT id, user_id, token, expires_at, revoked, created_at
-        FROM refresh_tokens
-        WHERE token = :token
-          AND revoked = FALSE
-          AND expires_at > NOW()
-        LIMIT 1
-    ]]></query>
-
-    <query name="refreshToken.revokeById"><![CDATA[
-        UPDATE refresh_tokens
-        SET revoked = TRUE
-        WHERE id = :id
-    ]]></query>
-
-    <query name="refreshToken.revokeAllByUserId"><![CDATA[
-        UPDATE refresh_tokens
-        SET revoked = TRUE
-        WHERE user_id = :userId
-          AND revoked = FALSE
+    <query name="user.anonymize"><![CDATA[
+        UPDATE users
+        SET email      = CONCAT('deleted-', id, '@deleted.invalid'),
+            name       = 'Usuário Removido',
+            updated_at = :updatedAt
+        WHERE clerk_id = :clerkId
     ]]></query>
 </queries>

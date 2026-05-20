@@ -1,8 +1,10 @@
 package com.hermes.finance.domain.user;
 
+import com.hermes.finance.config.TestJwtDecoderConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -10,6 +12,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@Import(TestJwtDecoderConfig.class)
 @Transactional
 class UserRepositoryTest {
 
@@ -17,29 +20,26 @@ class UserRepositoryTest {
     private UserRepository userRepository;
 
     @Test
-    void shouldFindUserByEmail() {
+    void shouldFindUserByClerkId() {
         User user = new User();
+        user.setClerkId("user_test_clerk_001");
         user.setName("Felipe");
         user.setEmail("felipe@email.com");
-        user.setPassword("hashed-password");
-        user.setRole("OWNER");
-        user.setActive(true);
         userRepository.save(user);
 
-        Optional<User> found = userRepository.findByEmail("felipe@email.com");
+        Optional<User> found = userRepository.findByClerkId("user_test_clerk_001");
 
         assertThat(found).isPresent();
+        assertThat(found.get().getClerkId()).isEqualTo("user_test_clerk_001");
         assertThat(found.get().getEmail()).isEqualTo("felipe@email.com");
     }
 
     @Test
     void shouldFindUserById() {
         User user = new User();
+        user.setClerkId("user_test_clerk_002");
         user.setName("Ana");
         user.setEmail("ana@email.com");
-        user.setPassword("hashed-password");
-        user.setRole("OWNER");
-        user.setActive(true);
         User saved = userRepository.save(user);
 
         Optional<User> found = userRepository.findById(saved.getId());
@@ -49,19 +49,18 @@ class UserRepositoryTest {
     }
 
     @Test
-    void shouldUpdatePassword() {
+    void shouldAnonymizeUser() {
         User user = new User();
+        user.setClerkId("user_test_clerk_003");
         user.setName("Mario");
         user.setEmail("mario@email.com");
-        user.setPassword("old-password");
-        user.setRole("OWNER");
-        user.setActive(true);
-        User saved = userRepository.save(user);
+        userRepository.save(user);
 
-        userRepository.updatePassword(saved.getId(), "new-password");
-        Optional<User> updated = userRepository.findById(saved.getId());
+        userRepository.anonymize("user_test_clerk_003");
 
+        Optional<User> updated = userRepository.findByClerkId("user_test_clerk_003");
         assertThat(updated).isPresent();
-        assertThat(updated.get().getPassword()).isEqualTo("new-password");
+        assertThat(updated.get().getName()).isEqualTo("Usuário Removido");
+        assertThat(updated.get().getEmail()).contains("@deleted.invalid");
     }
 }

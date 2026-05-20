@@ -18,20 +18,16 @@ class UserTest {
         OffsetDateTime createdAt = OffsetDateTime.now().minusDays(1);
 
         user.setId(id);
+        user.setClerkId("user_2abc123");
         user.setEmail("user@acme.com");
         user.setName("User");
-        user.setPassword("hashed");
-        user.setRole("OWNER");
-        user.setActive(true);
         user.setCreatedAt(createdAt);
         user.setUpdatedAt(createdAt);
 
         assertEquals(id, user.getId());
+        assertEquals("user_2abc123", user.getClerkId());
         assertEquals("user@acme.com", user.getEmail());
         assertEquals("User", user.getName());
-        assertEquals("hashed", user.getPassword());
-        assertEquals("OWNER", user.getRole());
-        assertTrue(user.isActive());
 
         user.onCreate();
         assertNotNull(user.getCreatedAt());

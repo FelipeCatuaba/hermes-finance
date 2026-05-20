@@ -2,37 +2,42 @@ package com.hermes.finance.logging;
 
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Constructor;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LoggingConstantsTest {
 
     @Test
-    void shouldExposeKnownConstantValues() {
-        assertEquals("USER_REGISTERED", LoggingConstants.USER_REGISTERED);
-        assertEquals("USER_LOGIN_SUCCESS", LoggingConstants.USER_LOGIN_SUCCESS);
-        assertEquals("INVALID_TOKEN", LoggingConstants.INVALID_TOKEN);
-        assertEquals("UNHANDLED_EXCEPTION", LoggingConstants.UNHANDLED_EXCEPTION);
-        assertEquals("EXPENSE_CREATED", LoggingConstants.EXPENSE_CREATED);
-        assertEquals("INCOME_CREATED", LoggingConstants.INCOME_CREATED);
-    }
+    void shouldExposeAllLoggingConstants() {
+        Supplier<String>[] constants = new Supplier[] {
+            () -> LoggingConstants.USER_REGISTERED,
+            () -> LoggingConstants.USER_UPDATED,
+            () -> LoggingConstants.USER_DELETED,
+            () -> LoggingConstants.FORBIDDEN_ACCESS_ATTEMPT,
+            () -> LoggingConstants.INVALID_TOKEN,
+            () -> LoggingConstants.EXPENSE_CREATED,
+            () -> LoggingConstants.EXPENSE_UPDATED,
+            () -> LoggingConstants.EXPENSE_DELETED,
+            () -> LoggingConstants.INSTALLMENT_GROUP_CREATED,
+            () -> LoggingConstants.INCOME_CREATED,
+            () -> LoggingConstants.INCOME_UPDATED,
+            () -> LoggingConstants.INCOME_DELETED,
+            () -> LoggingConstants.UNHANDLED_EXCEPTION
+        }; // 13 constantes
 
-    @Test
-    void shouldCoverPrivateConstructor() throws Exception {
-        Constructor<LoggingConstants> constructor = LoggingConstants.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        LoggingConstants instance = constructor.newInstance();
-
-        assertNotNull(instance);
-    }
-
-    @Test
-    void shouldContainAuthAndExpenseConstants() {
-        assertTrue(LoggingConstants.RATE_LIMIT_HIT.contains("RATE_LIMIT"));
-        assertTrue(LoggingConstants.EXPENSE_UPDATED.contains("EXPENSE"));
-        assertTrue(LoggingConstants.INCOME_UPDATED.contains("INCOME"));
+        assertEquals("USER_REGISTERED", constants[0].get());
+        assertEquals("USER_UPDATED", constants[1].get());
+        assertEquals("USER_DELETED", constants[2].get());
+        assertEquals("FORBIDDEN_ACCESS_ATTEMPT", constants[3].get());
+        assertEquals("INVALID_TOKEN", constants[4].get());
+        assertEquals("EXPENSE_CREATED", constants[5].get());
+        assertEquals("EXPENSE_UPDATED", constants[6].get());
+        assertEquals("EXPENSE_DELETED", constants[7].get());
+        assertEquals("INSTALLMENT_GROUP_CREATED", constants[8].get());
+        assertEquals("INCOME_CREATED", constants[9].get());
+        assertEquals("INCOME_UPDATED", constants[10].get());
+        assertEquals("INCOME_DELETED", constants[11].get());
+        assertEquals("UNHANDLED_EXCEPTION", constants[12].get());
     }
 }

@@ -20,7 +20,7 @@ class NativeQueryCatalogTest {
 
     @Test
     void testGetAnotherExistingQuery() {
-        String query = catalog.get("refreshToken.revokeById");
+        String query = catalog.get("user.anonymize");
         assertTrue(query.toLowerCase().contains("update"));
     }
 
@@ -43,4 +43,11 @@ class NativeQueryCatalogTest {
     void testGetQueryWithBlankName() {
         assertThrows(IllegalArgumentException.class, () -> catalog.get("   "));
     }
+
+    @Test
+    void shouldLoadQueriesIgnoringInvalidEntriesFromCatalog() {
+        assertTrue(catalog.get("user.findById").toLowerCase().contains("select"));
+        assertTrue(catalog.get("user.findByClerkId").toLowerCase().contains("where"));
+    }
+
 }

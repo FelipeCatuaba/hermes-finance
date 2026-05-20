@@ -1,16 +1,53 @@
+version: '3.8'
+
 services:
-  postgres:
-    image: postgres:16
-    container_name: hermes-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-hermes}
-      POSTGRES_USER: ${POSTGRES_USER:-hermes}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hermes}
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hermes-backend
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - CLERK_ISSUER_URI=${CLERK_ISSUER_URI}
+      - CLERK_JWKS_URI=${CLERK_JWKS_URI}
+      - CLERK_WEBHOOK_SECRET=${CLERK_WEBHOOK_SECRET}
+      - CLERK_WEBHOOK_REQUIRE_SIGNATURE=${CLERK_WEBHOOK_REQUIRE_SIGNATURE}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - DB_POOL_NAME=${DB_POOL_NAME}
+      - DB_MAX_POOL_SIZE=${DB_MAX_POOL_SIZE}
+      - DB_MIN_IDLE=${DB_MIN_IDLE}
+      - DB_CONNECTION_TIMEOUT_MS=${DB_CONNECTION_TIMEOUT_MS}
+      - DB_IDLE_TIMEOUT_MS=${DB_IDLE_TIMEOUT_MS}
+      - DB_MAX_LIFETIME_MS=${DB_MAX_LIFETIME_MS}
+    depends_on:
+      - postgres
+    networks:
+      - hermes-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: hermes-postgres-local
+    environment:
+      POSTGRES_DB: hermes_local
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes_dev
+    ports:
+      - "5433:5432"
     volumes:
-      - hermes-postgres-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hermes-network
+    profiles:
+      - local-only
 
 volumes:
-  hermes-postgres-data:
+  postgres_data:
+
+networks:
+  hermes-network:
+    driver: bridge

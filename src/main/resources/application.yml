@@ -2,9 +2,9 @@ spring:
   application:
     name: hermes-finance-backend
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/hermes}
-    username: ${DATABASE_USERNAME:hermes}
-    password: ${DATABASE_PASSWORD:hermes}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       pool-name: ${DB_POOL_NAME:HermesHikariPool}
@@ -25,21 +25,24 @@ spring:
     locations: classpath:db/migration
   jackson:
     time-zone: UTC
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Clerk: obtenha em Dashboard → API Keys → Advanced → JWT Issuer / JWKS URL
+          issuer-uri: ${CLERK_ISSUER_URI:https://prepared-blowfish-68.clerk.accounts.dev}
+          jwk-set-uri: ${CLERK_JWKS_URI:https://prepared-blowfish-68.clerk.accounts.dev/.well-known/jwks.json}
 
 server:
   port: ${SERVER_PORT:8080}
 
+clerk:
+  webhook:
+    secret: ${CLERK_WEBHOOK_SECRET:}
+    # Em dev pode ficar false; profile prod força true (ver bloco prod abaixo)
+    require-signature: ${CLERK_WEBHOOK_REQUIRE_SIGNATURE:false}
+
 security:
-  jwt:
-    secret: ${JWT_SECRET}
-    access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
-    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
-  password:
-    pepper: ${ARGON2_PEPPER}
-    argon2:
-      memory-kb: ${ARGON2_MEMORY:65536}
-      iterations: ${ARGON2_ITERATIONS:3}
-      parallelism: ${ARGON2_PARALLELISM:2}
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
 
@@ -51,6 +54,15 @@ management:
   endpoint:
     health:
       show-details: never
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
 
 logging:
   level:
@@ -70,6 +82,9 @@ spring:
   config:
     activate:
       on-profile: prod
+clerk:
+  webhook:
+    require-signature: true
 logging:
   level:
     root: INFO

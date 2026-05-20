@@ -28,33 +28,28 @@ public class UserRepository {
         UUID id = user.getId() != null ? user.getId() : UUID.randomUUID();
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime createdAt = user.getCreatedAt() != null ? user.getCreatedAt() : now;
-        OffsetDateTime updatedAt = now;
 
         String sql = nativeQueryCatalog.get("user.insert");
 
         MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("id", id)
+            .addValue("clerkId", user.getClerkId())
             .addValue("email", user.getEmail())
             .addValue("name", user.getName())
-            .addValue("password", user.getPassword())
-            .addValue("role", user.getRole())
-            .addValue("active", user.isActive())
             .addValue("createdAt", createdAt)
-            .addValue("updatedAt", updatedAt);
+            .addValue("updatedAt", now);
 
         jdbcTemplate.update(sql, params);
         user.setId(id);
         user.setCreatedAt(createdAt);
-        user.setUpdatedAt(updatedAt);
+        user.setUpdatedAt(now);
         return user;
     }
 
-    public Optional<User> findByEmail(String email) {
-        String sql = nativeQueryCatalog.get("user.findByEmail");
-
+    public Optional<User> findByClerkId(String clerkId) {
+        String sql = nativeQueryCatalog.get("user.findByClerkId");
         MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("email", email);
-
+            .addValue("clerkId", clerkId);
         return jdbcTemplate.query(sql, params, userRowMapper).stream().findFirst();
     }
 
@@ -65,11 +60,20 @@ public class UserRepository {
         return jdbcTemplate.query(sql, params, userRowMapper).stream().findFirst();
     }
 
-    public void updatePassword(UUID id, String password) {
-        String sql = nativeQueryCatalog.get("user.updatePassword");
+    public void updateProfile(String clerkId, String email, String name) {
+        String sql = nativeQueryCatalog.get("user.updateProfile");
         MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("id", id)
-            .addValue("password", password)
+            .addValue("clerkId", clerkId)
+            .addValue("email", email)
+            .addValue("name", name)
+            .addValue("updatedAt", OffsetDateTime.now());
+        jdbcTemplate.update(sql, params);
+    }
+
+    public void anonymize(String clerkId) {
+        String sql = nativeQueryCatalog.get("user.anonymize");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("clerkId", clerkId)
             .addValue("updatedAt", OffsetDateTime.now());
         jdbcTemplate.update(sql, params);
     }
