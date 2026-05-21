@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<queries>
+    <query name="user.insert"><![CDATA[
+        INSERT INTO users (id, external_auth_id, email, name, created_at, updated_at)
+        VALUES (:id, :externalAuthId, :email, :name, :createdAt, :updatedAt)
+    ]]></query>
+
+    <query name="user.findByExternalAuthId"><![CDATA[
+        SELECT id, external_auth_id, email, name, created_at, updated_at
+        FROM users
+        WHERE external_auth_id = :externalAuthId
+        LIMIT 1
+    ]]></query>
+
+    <query name="user.findById"><![CDATA[
+        SELECT id, external_auth_id, email, name, created_at, updated_at
+        FROM users
+        WHERE id = :id
+        LIMIT 1
+    ]]></query>
+
+    <query name="user.updateProfile"><![CDATA[
+        UPDATE users
+        SET email = :email, name = :name, updated_at = :updatedAt
+        WHERE external_auth_id = :externalAuthId
+    ]]></query>
+
+    <query name="user.anonymize"><![CDATA[
+        UPDATE users
+        SET email      = CONCAT('deleted-', id, '@deleted.invalid'),
+            name       = 'Usuario Removido',
+            updated_at = :updatedAt
+        WHERE external_auth_id = :externalAuthId
+    ]]></query>
+</queries>

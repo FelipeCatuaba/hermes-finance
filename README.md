@@ -2,11 +2,14 @@
 
 API Spring Boot do HERMES.
 
-## Setup seguro de variáveis
+## Setup de vari?veis
 
 1. Copie `.env.example` para `.env`
-2. Preencha segredos reais em `.env` (`JWT_SECRET`, `ARGON2_PEPPER`)
-3. Nunca versione `.env`
+2. Preencha `CLERK_JWKS_URI`, `CLERK_ISSUER_URI` e `CLERK_WEBHOOK_SECRET` (Clerk Dashboard)
+3. Ajuste `ALLOWED_ORIGINS` para a URL do frontend (ex.: `http://localhost:5173`)
+4. Nunca versione `.env`
+
+`CLERK_SECRET_KEY` ? opcional — s? necess?ria se o backend passar a chamar a API administrativa do Clerk.
 
 ## Banco local com Docker
 
@@ -20,6 +23,13 @@ docker compose up -d
 mvn spring-boot:run
 ```
 
-## Observação
+## Clerk — checklist r?pido
 
-Sem `JWT_SECRET` e `ARGON2_PEPPER` definidos, a aplicação falha no startup por segurança.
+| Onde | O qu? |
+|------|--------|
+| Clerk Dashboard ? Webhooks | Endpoint `POST https://<api>/api/webhooks/clerk`, eventos `user.created`, `user.updated`, `user.deleted` |
+| Clerk Dashboard ? Webhooks | Copiar **Signing Secret** ? `CLERK_WEBHOOK_SECRET` |
+| Clerk Dashboard ? API Keys | **Issuer** e **JWKS URL** ? `CLERK_ISSUER_URI` / `CLERK_JWKS_URI` |
+| Frontend | `pk_...` (publishable key) — n?o vai no backend |
+
+Em **produ??o** (`spring.profiles.active=prod`), webhooks sem `CLERK_WEBHOOK_SECRET` v?lido s?o rejeitados.

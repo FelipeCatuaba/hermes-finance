@@ -9,10 +9,27 @@ spring:
       ddl-auto: create-drop
   flyway:
     enabled: false
+  autoconfigure:
+    exclude:
+      - org.springdoc.webmvc.ui.SwaggerConfig
+
+# Disable Springdoc/Swagger UI during tests to avoid classpath issues
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Prevent Springdoc auto-configuration classes from loading in tests
 
 security:
   cors:
     allowed-origins: http://localhost:5173
+
+clerk:
+  webhook:
+    require-signature: false
+    secret: test-secret
 
 logging:
   level:
