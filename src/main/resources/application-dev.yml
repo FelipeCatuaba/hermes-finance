@@ -38,16 +38,21 @@ spring:
           issuer-uri: ${CLERK_ISSUER_URI:https://prepared-blowfish-68.clerk.accounts.dev}
           jwk-set-uri: ${CLERK_JWKS_URI:https://prepared-blowfish-68.clerk.accounts.dev/.well-known/jwks.json}
 
-
-
 clerk:
   webhook:
     secret: ${CLERK_WEBHOOK_SECRET}
     require-signature: ${CLERK_WEBHOOK_REQUIRE_SIGNATURE:false}
+    max-timestamp-skew-seconds: ${CLERK_WEBHOOK_MAX_TIMESTAMP_SKEW_SECONDS:300}
+    replay-cache-ttl-seconds: ${CLERK_WEBHOOK_REPLAY_CACHE_TTL_SECONDS:900}
 
 security:
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
+  jwt:
+    allowed-audiences: ${JWT_ALLOWED_AUDIENCES:}
+  rate-limit:
+    max-requests: ${RATE_LIMIT_MAX_REQUESTS:120}
+    window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
 
 management:
   endpoints:

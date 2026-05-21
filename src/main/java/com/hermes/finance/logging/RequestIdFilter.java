@@ -1,6 +1,6 @@
 package com.hermes.finance.logging;
 
-import com.hermes.finance.security.AuthenticatedUserContext;
+import com.hermes.finance.security.AuthIdentityProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,10 +18,10 @@ import java.util.UUID;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter extends OncePerRequestFilter {
 
-    private final AuthenticatedUserContext authenticatedUserContext;
+    private final AuthIdentityProvider authIdentityProvider;
 
-    public RequestIdFilter(AuthenticatedUserContext authenticatedUserContext) {
-        this.authenticatedUserContext = authenticatedUserContext;
+    public RequestIdFilter(AuthIdentityProvider authIdentityProvider) {
+        this.authIdentityProvider = authIdentityProvider;
     }
 
     @Override
@@ -30,7 +30,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String requestId = "req-" + UUID.randomUUID().toString().substring(0, 8);
         MDC.put("requestId", requestId);
-        MDC.put("userId", authenticatedUserContext.getUserIdOrAnonymous());
+        MDC.put("userId", authIdentityProvider.getUserIdOrAnonymous());
 
         try {
             filterChain.doFilter(request, response);

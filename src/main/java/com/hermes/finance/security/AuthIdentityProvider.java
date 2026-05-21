@@ -1,9 +1,8 @@
 package com.hermes.finance.security;
 
-public interface AuthenticatedUserContext {
+public interface AuthIdentityProvider {
 
     String getRequiredUserId();
 
     String getUserIdOrAnonymous();
 }
-
