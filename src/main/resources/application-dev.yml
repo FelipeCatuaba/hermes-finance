@@ -1,10 +1,13 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: hermes-finance
   config:
     import: optional:file:.env[.properties]
     activate:
-      on-profile: prd
+      on-profile: dev
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
@@ -28,13 +31,10 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
-  jackson:
-    time-zone: UTC
   security:
     oauth2:
       resourceserver:
         jwt:
-          # Clerk: obtenha em Dashboard → API Keys → Advanced → JWT Issuer / JWKS URL
           issuer-uri: ${CLERK_ISSUER_URI:https://prepared-blowfish-68.clerk.accounts.dev}
           jwk-set-uri: ${CLERK_JWKS_URI:https://prepared-blowfish-68.clerk.accounts.dev/.well-known/jwks.json}
 
@@ -43,12 +43,11 @@ spring:
 clerk:
   webhook:
     secret: ${CLERK_WEBHOOK_SECRET}
-    # Em dev pode ficar false; profile prod força true (ver bloco prod abaixo)
-    require-signature: ${CLERK_WEBHOOK_REQUIRE_SIGNATURE}
+    require-signature: ${CLERK_WEBHOOK_REQUIRE_SIGNATURE:false}
 
 security:
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS}
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
 
 management:
   endpoints:
@@ -70,4 +69,4 @@ springdoc:
 
 logging:
   level:
-    root: ${LOG_LEVEL:INFO}
+    root: ${LOG_LEVEL:DEBUG}

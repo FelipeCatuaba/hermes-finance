@@ -16,7 +16,7 @@
         <logger name="org.springframework.security" level="WARN"/>
     </springProfile>
 
-    <springProfile name="dev,default">
+    <springProfile name="dev,default,local">
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
                 <pattern>%d{HH:mm:ss} %-5level [%X{requestId}] [%X{userId}] %logger{36} - %msg%n</pattern>

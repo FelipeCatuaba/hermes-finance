@@ -20,8 +20,8 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "clerk_id", nullable = false, unique = true)
-    private String clerkId;
+    @Column(name = "external_auth_id", nullable = false, unique = true)
+    private String externalAuthId;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -50,8 +50,8 @@ public class User {
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
-    public String getClerkId() { return clerkId; }
-    public void setClerkId(String clerkId) { this.clerkId = clerkId; }
+    public String getExternalAuthId() { return externalAuthId; }
+    public void setExternalAuthId(String externalAuthId) { this.externalAuthId = externalAuthId; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

@@ -1,5 +1,6 @@
 package com.hermes.finance.util;
 
+import com.hermes.finance.domain.webhook.WebhookSignatureVerifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +15,7 @@ import java.util.Base64;
  * Verifica assinaturas de webhooks do Clerk via protocolo Svix (HMAC-SHA256).
  */
 @Component
-public class SvixWebhookVerifier {
+public class SvixWebhookVerifier implements WebhookSignatureVerifier {
 
     private static final Logger log = LoggerFactory.getLogger(SvixWebhookVerifier.class);
     private static final String HMAC_ALGORITHM = "HmacSHA256";

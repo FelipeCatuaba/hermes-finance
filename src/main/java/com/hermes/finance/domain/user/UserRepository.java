@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public class UserRepository {
+public class UserRepository implements UserRepositoryPort {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final NativeQueryCatalog nativeQueryCatalog;
@@ -33,7 +33,7 @@ public class UserRepository {
 
         MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("id", id)
-            .addValue("clerkId", user.getClerkId())
+            .addValue("externalAuthId", user.getExternalAuthId())
             .addValue("email", user.getEmail())
             .addValue("name", user.getName())
             .addValue("createdAt", createdAt)
@@ -46,10 +46,10 @@ public class UserRepository {
         return user;
     }
 
-    public Optional<User> findByClerkId(String clerkId) {
-        String sql = nativeQueryCatalog.get("user.findByClerkId");
+    public Optional<User> findByExternalAuthId(String externalAuthId) {
+        String sql = nativeQueryCatalog.get("user.findByExternalAuthId");
         MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("clerkId", clerkId);
+            .addValue("externalAuthId", externalAuthId);
         return jdbcTemplate.query(sql, params, userRowMapper).stream().findFirst();
     }
 
@@ -60,20 +60,20 @@ public class UserRepository {
         return jdbcTemplate.query(sql, params, userRowMapper).stream().findFirst();
     }
 
-    public void updateProfile(String clerkId, String email, String name) {
+    public void updateProfile(String externalAuthId, String email, String name) {
         String sql = nativeQueryCatalog.get("user.updateProfile");
         MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("clerkId", clerkId)
+            .addValue("externalAuthId", externalAuthId)
             .addValue("email", email)
             .addValue("name", name)
             .addValue("updatedAt", OffsetDateTime.now());
         jdbcTemplate.update(sql, params);
     }
 
-    public void anonymize(String clerkId) {
+    public void anonymize(String externalAuthId) {
         String sql = nativeQueryCatalog.get("user.anonymize");
         MapSqlParameterSource params = new MapSqlParameterSource()
-            .addValue("clerkId", clerkId)
+            .addValue("externalAuthId", externalAuthId)
             .addValue("updatedAt", OffsetDateTime.now());
         jdbcTemplate.update(sql, params);
     }
