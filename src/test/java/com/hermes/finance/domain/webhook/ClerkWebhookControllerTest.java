@@ -1,11 +1,12 @@
 package com.hermes.finance.domain.webhook;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hermes.finance.domain.user.UserService;
+import com.hermes.finance.domain.identity.IdentityEventType;
+import com.hermes.finance.domain.identity.IdentityEventHandler;
+import com.hermes.finance.domain.identity.IdentityUserEvent;
 import com.hermes.finance.dto.request.ClerkWebhookEvent;
 import com.hermes.finance.logging.AppLogger;
 import com.hermes.finance.logging.LoggingConstants;
-import com.hermes.finance.util.SvixWebhookVerifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.when;
 class ClerkWebhookControllerTest {
 
     @Mock
-    private UserService userService;
+    private IdentityEventHandler identityEventHandler;
 
     @Mock
     private ObjectMapper objectMapper;
@@ -35,24 +36,40 @@ class ClerkWebhookControllerTest {
     private AppLogger appLogger;
 
     @Mock
-    private SvixWebhookVerifier svixVerifier;
+    private WebhookSignatureVerifier signatureVerifier;
+
+    @Mock
+    private WebhookReplayGuard webhookReplayGuard;
+
+    @Mock
+    private ClerkWebhookEventMapper eventMapper;
 
     private ClerkWebhookController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new ClerkWebhookController(userService, objectMapper, appLogger, svixVerifier);
+        controller = new ClerkWebhookController(
+            identityEventHandler,
+            objectMapper,
+            appLogger,
+            signatureVerifier,
+            webhookReplayGuard,
+            eventMapper,
+            "secret"
+        );
     }
 
     @Test
     void shouldReturnBadRequestWhenSignatureIsInvalid() {
-        when(svixVerifier.verify(any(), any(), any(), any(), any())).thenReturn(false);
+        when(signatureVerifier.verify(any(), any(), any(), any(), any())).thenReturn(false);
+        when(webhookReplayGuard.isValidTimestamp("1710000000")).thenReturn(true);
+        when(webhookReplayGuard.isFirstDelivery("id")).thenReturn(true);
 
-        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "ts", "sig", "{}");
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "1710000000", "sig", "{}");
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(appLogger).warn(eq(LoggingConstants.INVALID_TOKEN), any());
-        verify(userService, never()).createFromClerk(any());
+        verify(identityEventHandler, never()).handle(any());
     }
 
     @Test
@@ -64,13 +81,17 @@ class ClerkWebhookControllerTest {
         event.setType("user.created");
         event.setData(data);
 
-        when(svixVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(signatureVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(webhookReplayGuard.isValidTimestamp("1710000000")).thenReturn(true);
+        when(webhookReplayGuard.isFirstDelivery("id")).thenReturn(true);
         when(objectMapper.readValue(payload, ClerkWebhookEvent.class)).thenReturn(event);
+        when(eventMapper.toIdentityUserEvent(event))
+            .thenReturn(new IdentityUserEvent(IdentityEventType.USER_CREATED, null));
 
-        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "ts", "sig", payload);
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "1710000000", "sig", payload);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(userService).createFromClerk(data);
+        verify(identityEventHandler).handle(any());
     }
 
     @Test
@@ -82,13 +103,17 @@ class ClerkWebhookControllerTest {
         event.setType("user.deleted");
         event.setData(data);
 
-        when(svixVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(signatureVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(webhookReplayGuard.isValidTimestamp("1710000000")).thenReturn(true);
+        when(webhookReplayGuard.isFirstDelivery("id")).thenReturn(true);
         when(objectMapper.readValue(payload, ClerkWebhookEvent.class)).thenReturn(event);
+        when(eventMapper.toIdentityUserEvent(event))
+            .thenReturn(new IdentityUserEvent(IdentityEventType.USER_DELETED, null));
 
-        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "ts", "sig", payload);
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "1710000000", "sig", payload);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(userService).anonymize("user_del");
+        verify(identityEventHandler).handle(any());
     }
 
     @Test
@@ -100,13 +125,17 @@ class ClerkWebhookControllerTest {
         event.setType("user.updated");
         event.setData(data);
 
-        when(svixVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(signatureVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(webhookReplayGuard.isValidTimestamp("1710000000")).thenReturn(true);
+        when(webhookReplayGuard.isFirstDelivery("id")).thenReturn(true);
         when(objectMapper.readValue(payload, ClerkWebhookEvent.class)).thenReturn(event);
+        when(eventMapper.toIdentityUserEvent(event))
+            .thenReturn(new IdentityUserEvent(IdentityEventType.USER_UPDATED, null));
 
-        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "ts", "sig", payload);
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "1710000000", "sig", payload);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(userService).updateFromClerk(data);
+        verify(identityEventHandler).handle(any());
     }
 
     @Test
@@ -115,15 +144,17 @@ class ClerkWebhookControllerTest {
         ClerkWebhookEvent event = new ClerkWebhookEvent();
         event.setType("session.created");
 
-        when(svixVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(signatureVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(webhookReplayGuard.isValidTimestamp("1710000000")).thenReturn(true);
+        when(webhookReplayGuard.isFirstDelivery("id")).thenReturn(true);
         when(objectMapper.readValue(payload, ClerkWebhookEvent.class)).thenReturn(event);
+        when(eventMapper.toIdentityUserEvent(event))
+            .thenReturn(new IdentityUserEvent(IdentityEventType.UNSUPPORTED, null));
 
-        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "ts", "sig", payload);
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "1710000000", "sig", payload);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(userService, never()).createFromClerk(any());
-        verify(userService, never()).updateFromClerk(any());
-        verify(userService, never()).anonymize(any());
+        verify(identityEventHandler).handle(any());
     }
 
     @Test
@@ -131,25 +162,52 @@ class ClerkWebhookControllerTest {
         String payload = "{\"type\":null}";
         ClerkWebhookEvent event = new ClerkWebhookEvent();
 
-        when(svixVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(signatureVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(webhookReplayGuard.isValidTimestamp("1710000000")).thenReturn(true);
+        when(webhookReplayGuard.isFirstDelivery("id")).thenReturn(true);
         when(objectMapper.readValue(payload, ClerkWebhookEvent.class)).thenReturn(event);
+        when(eventMapper.toIdentityUserEvent(event))
+            .thenReturn(new IdentityUserEvent(IdentityEventType.UNSUPPORTED, null));
 
-        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "ts", "sig", payload);
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "1710000000", "sig", payload);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(userService, never()).createFromClerk(any());
+        verify(identityEventHandler).handle(any());
     }
 
     @Test
     void shouldReturnInternalServerErrorWhenPayloadParsingFails() throws Exception {
         String payload = "not-json";
-        when(svixVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(signatureVerifier.verify(any(), any(), any(), any(), eq(payload))).thenReturn(true);
+        when(webhookReplayGuard.isValidTimestamp("1710000000")).thenReturn(true);
+        when(webhookReplayGuard.isFirstDelivery("id")).thenReturn(true);
         doThrow(new RuntimeException("parse error"))
             .when(objectMapper).readValue(payload, ClerkWebhookEvent.class);
 
-        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "ts", "sig", payload);
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "1710000000", "sig", payload);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         verify(appLogger).error(eq(LoggingConstants.UNHANDLED_EXCEPTION), any(), any(RuntimeException.class));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenTimestampInvalid() {
+        when(webhookReplayGuard.isValidTimestamp("bad-ts")).thenReturn(false);
+
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "bad-ts", "sig", "{}");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(signatureVerifier, never()).verify(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldIgnoreReplayEvent() {
+        when(webhookReplayGuard.isValidTimestamp("1710000000")).thenReturn(true);
+        when(webhookReplayGuard.isFirstDelivery("id")).thenReturn(false);
+
+        ResponseEntity<Void> response = controller.handleClerkWebhook("id", "1710000000", "sig", "{}");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(signatureVerifier, never()).verify(any(), any(), any(), any(), any());
     }
 }

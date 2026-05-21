@@ -34,21 +34,24 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # Clerk: obtenha em Dashboard → API Keys → Advanced → JWT Issuer / JWKS URL
           issuer-uri: ${CLERK_ISSUER_URI:https://prepared-blowfish-68.clerk.accounts.dev}
           jwk-set-uri: ${CLERK_JWKS_URI:https://prepared-blowfish-68.clerk.accounts.dev/.well-known/jwks.json}
-
-
 
 clerk:
   webhook:
     secret: ${CLERK_WEBHOOK_SECRET}
-    # Em dev pode ficar false; profile prod força true (ver bloco prod abaixo)
     require-signature: ${CLERK_WEBHOOK_REQUIRE_SIGNATURE}
+    max-timestamp-skew-seconds: ${CLERK_WEBHOOK_MAX_TIMESTAMP_SKEW_SECONDS:300}
+    replay-cache-ttl-seconds: ${CLERK_WEBHOOK_REPLAY_CACHE_TTL_SECONDS:900}
 
 security:
   cors:
     allowed-origins: ${ALLOWED_ORIGINS}
+  jwt:
+    allowed-audiences: ${JWT_ALLOWED_AUDIENCES}
+  rate-limit:
+    max-requests: ${RATE_LIMIT_MAX_REQUESTS}
+    window-seconds: ${RATE_LIMIT_WINDOW_SECONDS}
 
 management:
   endpoints:

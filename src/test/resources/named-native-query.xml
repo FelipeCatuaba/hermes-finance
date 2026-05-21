@@ -28,7 +28,7 @@
     <query name="user.anonymize"><![CDATA[
         UPDATE users
         SET email      = CONCAT('deleted-', id, '@deleted.invalid'),
-            name       = 'Usuario Removido',
+            name       = 'Usuário Removido',
             updated_at = :updatedAt
         WHERE external_auth_id = :externalAuthId
     ]]></query>

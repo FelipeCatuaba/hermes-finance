@@ -1,6 +1,6 @@
 package com.hermes.finance.logging;
 
-import com.hermes.finance.util.SecurityUtils;
+import com.hermes.finance.security.AuthIdentityProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,14 +15,13 @@ import org.slf4j.MDC;
 import java.io.IOException;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RequestIdFilterTest {
 
     @Mock
-    private SecurityUtils securityUtils;
+    private AuthIdentityProvider authIdentityProvider;
 
     @InjectMocks
     private RequestIdFilter requestIdFilter;
@@ -38,7 +37,7 @@ class RequestIdFilterTest {
 
     @Test
     void testDoFilterInternalAddsRequestId() throws ServletException, IOException {
-        when(securityUtils.getCurrentUserIdOrAnonymous()).thenReturn("anonymous");
+        when(authIdentityProvider.getUserIdOrAnonymous()).thenReturn("anonymous");
         MDC.clear();
 
         requestIdFilter.doFilterInternal(request, response, filterChain);
@@ -48,7 +47,7 @@ class RequestIdFilterTest {
 
     @Test
     void testDoFilterInternalWithAuthenticatedUser() throws ServletException, IOException {
-        when(securityUtils.getCurrentUserIdOrAnonymous()).thenReturn("user123");
+        when(authIdentityProvider.getUserIdOrAnonymous()).thenReturn("user123");
         MDC.clear();
 
         requestIdFilter.doFilterInternal(request, response, filterChain);
@@ -58,7 +57,7 @@ class RequestIdFilterTest {
 
     @Test
     void testDoFilterInternalClearsContext() throws ServletException, IOException {
-        when(securityUtils.getCurrentUserIdOrAnonymous()).thenReturn("user");
+        when(authIdentityProvider.getUserIdOrAnonymous()).thenReturn("user");
         MDC.clear();
 
         requestIdFilter.doFilterInternal(request, response, filterChain);
@@ -69,7 +68,7 @@ class RequestIdFilterTest {
 
     @Test
     void testDoFilterInternalHandlesException() throws ServletException, IOException {
-        when(securityUtils.getCurrentUserIdOrAnonymous()).thenReturn("user");
+        when(authIdentityProvider.getUserIdOrAnonymous()).thenReturn("user");
         doThrow(new ServletException("Filter error")).when(filterChain).doFilter(any(), any());
 
         try {
@@ -83,7 +82,7 @@ class RequestIdFilterTest {
 
     @Test
     void testDoFilterInternalGeneratesUniqueRequestId() throws ServletException, IOException {
-        when(securityUtils.getCurrentUserIdOrAnonymous()).thenReturn("user");
+        when(authIdentityProvider.getUserIdOrAnonymous()).thenReturn("user");
         MDC.clear();
 
         requestIdFilter.doFilterInternal(request, response, filterChain);

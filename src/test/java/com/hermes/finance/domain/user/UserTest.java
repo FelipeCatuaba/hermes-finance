@@ -18,14 +18,14 @@ class UserTest {
         OffsetDateTime createdAt = OffsetDateTime.now().minusDays(1);
 
         user.setId(id);
-        user.setClerkId("user_2abc123");
+        user.setExternalAuthId("user_2abc123");
         user.setEmail("user@acme.com");
         user.setName("User");
         user.setCreatedAt(createdAt);
         user.setUpdatedAt(createdAt);
 
         assertEquals(id, user.getId());
-        assertEquals("user_2abc123", user.getClerkId());
+        assertEquals("user_2abc123", user.getExternalAuthId());
         assertEquals("user@acme.com", user.getEmail());
         assertEquals("User", user.getName());
 

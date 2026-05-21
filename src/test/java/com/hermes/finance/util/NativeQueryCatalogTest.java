@@ -47,7 +47,7 @@ class NativeQueryCatalogTest {
     @Test
     void shouldLoadQueriesIgnoringInvalidEntriesFromCatalog() {
         assertTrue(catalog.get("user.findById").toLowerCase().contains("select"));
-        assertTrue(catalog.get("user.findByClerkId").toLowerCase().contains("where"));
+        assertTrue(catalog.get("user.findByExternalAuthId").toLowerCase().contains("where"));
     }
 
 }

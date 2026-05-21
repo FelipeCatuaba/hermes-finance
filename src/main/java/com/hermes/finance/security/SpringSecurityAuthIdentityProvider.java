@@ -7,15 +7,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
 @Component
-public class SpringSecurityAuthenticatedUserContext implements AuthenticatedUserContext {
+public class SpringSecurityAuthIdentityProvider implements AuthIdentityProvider {
 
     @Override
     public String getRequiredUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Não autenticado");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Nao autenticado");
         }
-        return auth.getName();
+
+        String name = auth.getName();
+        if (name == null || name.isBlank() || "anonymousUser".equals(name)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Nao autenticado");
+        }
+        return name;
     }
 
     @Override
@@ -24,7 +29,11 @@ public class SpringSecurityAuthenticatedUserContext implements AuthenticatedUser
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             return "anonymous";
         }
-        return auth.getName();
+
+        String name = auth.getName();
+        if (name == null || name.isBlank() || "anonymousUser".equals(name)) {
+            return "anonymous";
+        }
+        return name;
     }
 }
-

@@ -1,8 +1,7 @@
 package com.hermes.finance.domain.webhook;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hermes.finance.domain.user.UserService;
-import com.hermes.finance.domain.user.UserSyncData;
+import com.hermes.finance.domain.identity.IdentityEventHandler;
 import com.hermes.finance.dto.request.ClerkWebhookEvent;
 import com.hermes.finance.logging.AppLogger;
 import com.hermes.finance.logging.LoggingConstants;
@@ -20,25 +19,28 @@ import java.util.Map;
 @RequestMapping("/api/webhooks")
 public class ClerkWebhookController {
 
-    private final UserService userService;
+    private final IdentityEventHandler identityEventHandler;
     private final ObjectMapper objectMapper;
     private final AppLogger appLogger;
     private final WebhookSignatureVerifier signatureVerifier;
+    private final WebhookReplayGuard webhookReplayGuard;
     private final ClerkWebhookEventMapper eventMapper;
     private final String webhookSecret;
 
     public ClerkWebhookController(
-        UserService userService,
+        IdentityEventHandler identityEventHandler,
         ObjectMapper objectMapper,
         AppLogger appLogger,
         WebhookSignatureVerifier signatureVerifier,
+        WebhookReplayGuard webhookReplayGuard,
         ClerkWebhookEventMapper eventMapper,
         @Value("${clerk.webhook.secret}") String webhookSecret
     ) {
-        this.userService = userService;
+        this.identityEventHandler = identityEventHandler;
         this.objectMapper = objectMapper;
         this.appLogger = appLogger;
         this.signatureVerifier = signatureVerifier;
+        this.webhookReplayGuard = webhookReplayGuard;
         this.eventMapper = eventMapper;
         this.webhookSecret = webhookSecret;
     }
@@ -50,6 +52,18 @@ public class ClerkWebhookController {
         @RequestHeader("svix-signature") String svixSignature,
         @RequestBody String payload
     ) {
+        if (!webhookReplayGuard.isValidTimestamp(svixTimestamp)) {
+            appLogger.warn(LoggingConstants.INVALID_TOKEN,
+                Map.of("reason", "invalid_svix_timestamp", "source", "clerk_webhook"));
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (!webhookReplayGuard.isFirstDelivery(svixId)) {
+            appLogger.warn(LoggingConstants.INVALID_TOKEN,
+                Map.of("reason", "replayed_svix_id", "source", "clerk_webhook"));
+            return ResponseEntity.ok().build();
+        }
+
         if (!signatureVerifier.verify(webhookSecret, svixId, svixTimestamp, svixSignature, payload)) {
             appLogger.warn(LoggingConstants.INVALID_TOKEN,
                 Map.of("reason", "invalid_svix_signature", "source", "clerk_webhook"));
@@ -58,20 +72,7 @@ public class ClerkWebhookController {
 
         try {
             ClerkWebhookEvent event = objectMapper.readValue(payload, ClerkWebhookEvent.class);
-            UserSyncData syncData = eventMapper.toUserSyncData(event.getData());
-
-            switch (event.getType() != null ? event.getType() : "") {
-                case "user.created" -> userService.createFromExternalProvider(syncData);
-                case "user.updated" -> userService.updateFromExternalProvider(syncData);
-                case "user.deleted" -> {
-                    if (syncData != null) {
-                        userService.anonymize(syncData.externalAuthId());
-                    }
-                }
-                default -> {
-                    // Ignora eventos nao utilizados no backend.
-                }
-            }
+            identityEventHandler.handle(eventMapper.toIdentityUserEvent(event));
         } catch (Exception e) {
             appLogger.error(LoggingConstants.UNHANDLED_EXCEPTION,
                 Map.of("path", "/api/webhooks/clerk"), e);
