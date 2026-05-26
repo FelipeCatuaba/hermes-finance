@@ -37,3 +37,16 @@ build/
 .env
 .env.*
 !.env.example
+
+# Terraform local artifacts
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

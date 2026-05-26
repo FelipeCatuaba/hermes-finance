@@ -34,4 +34,38 @@
             updated_at = :updatedAt
         WHERE external_auth_id = :externalAuthId
     ]]></query>
+
+    <query name="familyMember.insert"><![CDATA[
+        INSERT INTO family_members (id, user_id, name, relation, active, created_at)
+        VALUES (:id, :userId, :name, :relation, :active, :createdAt)
+    ]]></query>
+
+    <query name="familyMember.findByUserId"><![CDATA[
+        SELECT id, user_id, name, relation, active, created_at
+        FROM family_members
+        WHERE user_id = :userId
+          AND (:includeInactive = true OR active = true)
+        ORDER BY created_at DESC
+    ]]></query>
+
+    <query name="familyMember.findById"><![CDATA[
+        SELECT id, user_id, name, relation, active, created_at
+        FROM family_members
+        WHERE id = :id
+        LIMIT 1
+    ]]></query>
+
+    <query name="familyMember.update"><![CDATA[
+        UPDATE family_members
+        SET name = :name,
+            relation = :relation,
+            active = :active
+        WHERE id = :id
+    ]]></query>
+
+    <query name="familyMember.deactivate"><![CDATA[
+        UPDATE family_members
+        SET active = false
+        WHERE id = :id
+    ]]></query>
 </queries>
