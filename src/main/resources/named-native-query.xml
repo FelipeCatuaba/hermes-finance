@@ -68,4 +68,50 @@
         SET active = false
         WHERE id = :id
     ]]></query>
+
+    <query name="expenseCategory.insert"><![CDATA[
+        INSERT INTO expense_categories (id, user_id, name, icon, color_hex, is_default, active, created_at)
+        VALUES (:id, :userId, :name, :icon, :colorHex, :isDefault, :active, :createdAt)
+    ]]></query>
+
+    <query name="expenseCategory.findVisibleForUser"><![CDATA[
+        SELECT id, user_id, name, icon, color_hex, is_default, active, created_at
+        FROM expense_categories
+        WHERE (is_default = true OR user_id = :userId)
+          AND (:includeInactive = true OR active = true)
+        ORDER BY is_default DESC, name ASC
+    ]]></query>
+
+    <query name="expenseCategory.findById"><![CDATA[
+        SELECT id, user_id, name, icon, color_hex, is_default, active, created_at
+        FROM expense_categories
+        WHERE id = :id
+        LIMIT 1
+    ]]></query>
+
+    <query name="expenseCategory.update"><![CDATA[
+        UPDATE expense_categories
+        SET name = :name,
+            icon = :icon,
+            color_hex = :colorHex,
+            active = :active
+        WHERE id = :id
+    ]]></query>
+
+    <query name="expenseCategory.deactivate"><![CDATA[
+        UPDATE expense_categories
+        SET active = false
+        WHERE id = :id
+    ]]></query>
+
+    <query name="expenseCategory.delete"><![CDATA[
+        DELETE FROM expense_categories
+        WHERE id = :id
+    ]]></query>
+
+    <query name="expenseCategory.isInUse"><![CDATA[
+        SELECT COUNT(1)
+        FROM expenses
+        WHERE category_id = :id
+    ]]></query>
 </queries>
