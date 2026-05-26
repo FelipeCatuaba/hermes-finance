@@ -1,0 +1,94 @@
+name: terraform-apply
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform-apply.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: infra-dev-apply
+
+    env:
+      AWS_REGION: us-east-1
+
+    defaults:
+      run:
+        working-directory: infra/terraform/environments/dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Generate backend.hcl
+        run: |
+          cat > backend.hcl <<EOF
+          bucket         = "${{ vars.TF_STATE_BUCKET }}"
+          key            = "hermes-finance/dev/terraform.tfstate"
+          region         = "${{ env.AWS_REGION }}"
+          dynamodb_table = "${{ vars.TF_STATE_LOCK_TABLE }}"
+          encrypt        = true
+          EOF
+
+      - name: Generate terraform.auto.tfvars
+        run: |
+          cat > terraform.auto.tfvars <<EOF
+          allowed_ssh_cidrs = ["${{ vars.TF_ALLOWED_SSH_CIDR }}"]
+          db_username = "${{ vars.TF_DB_USERNAME }}"
+          db_password = "${{ secrets.TF_DB_PASSWORD }}"
+          github_owner = "${{ vars.TF_GITHUB_OWNER }}"
+          github_repo = "${{ vars.TF_GITHUB_REPO }}"
+          existing_oidc_provider_arn = "${{ vars.TF_EXISTING_OIDC_PROVIDER_ARN }}"
+          plain_ssm_parameters = {
+            "/hermes/dev/AUTH_PROVIDER" = "${{ vars.TF_AUTH_PROVIDER }}"
+            "/hermes/dev/CLERK_ISSUER_URI" = "${{ vars.TF_CLERK_ISSUER_URI }}"
+            "/hermes/dev/CLERK_JWKS_URI" = "${{ vars.TF_CLERK_JWKS_URI }}"
+            "/hermes/dev/CLERK_WEBHOOK_REQUIRE_SIGNATURE" = "${{ vars.TF_CLERK_WEBHOOK_REQUIRE_SIGNATURE }}"
+            "/hermes/dev/CLERK_WEBHOOK_MAX_TIMESTAMP_SKEW_SECONDS" = "${{ vars.TF_CLERK_WEBHOOK_MAX_TIMESTAMP_SKEW_SECONDS }}"
+            "/hermes/dev/CLERK_WEBHOOK_REPLAY_CACHE_TTL_SECONDS" = "${{ vars.TF_CLERK_WEBHOOK_REPLAY_CACHE_TTL_SECONDS }}"
+            "/hermes/dev/ALLOWED_ORIGINS" = "${{ vars.TF_ALLOWED_ORIGINS }}"
+            "/hermes/dev/JWT_ALLOWED_AUDIENCES" = ""
+            "/hermes/dev/RATE_LIMIT_MAX_REQUESTS" = "120"
+            "/hermes/dev/RATE_LIMIT_WINDOW_SECONDS" = "60"
+            "/hermes/dev/DB_POOL_NAME" = "${{ vars.TF_DB_POOL_NAME }}"
+            "/hermes/dev/DB_MAX_POOL_SIZE" = "${{ vars.TF_DB_MAX_POOL_SIZE }}"
+            "/hermes/dev/DB_MIN_IDLE" = "${{ vars.TF_DB_MIN_IDLE }}"
+            "/hermes/dev/DB_CONNECTION_TIMEOUT_MS" = "${{ vars.TF_DB_CONNECTION_TIMEOUT_MS }}"
+            "/hermes/dev/DB_IDLE_TIMEOUT_MS" = "${{ vars.TF_DB_IDLE_TIMEOUT_MS }}"
+            "/hermes/dev/DB_MAX_LIFETIME_MS" = "${{ vars.TF_DB_MAX_LIFETIME_MS }}"
+            "/hermes/dev/LOG_LEVEL" = "${{ vars.TF_LOG_LEVEL }}"
+          }
+          secure_ssm_parameters = {
+            "/hermes/dev/CLERK_WEBHOOK_SECRET" = "${{ secrets.TF_CLERK_WEBHOOK_SECRET }}"
+          }
+          EOF
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve tfplan
