@@ -68,4 +68,64 @@
         SET active = false
         WHERE id = :id
     ]]></query>
+
+    <query name="expense.insert"><![CDATA[
+        INSERT INTO expenses (
+            id,
+            user_id,
+            family_member_id,
+            category_id,
+            description,
+            amount,
+            expense_date,
+            is_fixed,
+            payment_method,
+            notes,
+            scope,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            :id,
+            :userId,
+            :familyMemberId,
+            :categoryId,
+            :description,
+            :amount,
+            :expenseDate,
+            :isFixed,
+            :paymentMethod,
+            :notes,
+            :scope,
+            :createdAt,
+            :updatedAt
+        )
+        RETURNING id,
+                  user_id,
+                  family_member_id,
+                  category_id,
+                  description,
+                  amount,
+                  expense_date,
+                  is_fixed,
+                  payment_method,
+                  notes,
+                  scope,
+                  created_at,
+                  updated_at
+    ]]></query>
+
+    <query name="expense.familyMemberBelongsToUser"><![CDATA[
+        SELECT COUNT(1)
+        FROM family_members
+        WHERE id = :familyMemberId
+          AND user_id = :userId
+    ]]></query>
+
+    <query name="expense.categoryIsAccessible"><![CDATA[
+        SELECT COUNT(1)
+        FROM expense_categories
+        WHERE id = :categoryId
+          AND (is_default = true OR user_id = :userId)
+    ]]></query>
 </queries>
