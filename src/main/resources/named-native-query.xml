@@ -75,9 +75,13 @@
             user_id,
             family_member_id,
             category_id,
+            installment_group_id,
             description,
             amount,
             expense_date,
+            installment_number,
+            total_installments,
+            is_recurring,
             is_fixed,
             payment_method,
             notes,
@@ -90,9 +94,13 @@
             :userId,
             :familyMemberId,
             :categoryId,
+            :installmentGroupId,
             :description,
             :amount,
             :expenseDate,
+            :installmentNumber,
+            :totalInstallments,
+            :isRecurring,
             :isFixed,
             :paymentMethod,
             :notes,
@@ -104,15 +112,41 @@
                   user_id,
                   family_member_id,
                   category_id,
+                  installment_group_id,
                   description,
                   amount,
                   expense_date,
+                  installment_number,
+                  total_installments,
+                  is_recurring,
                   is_fixed,
                   payment_method,
                   notes,
                   scope,
                   created_at,
                   updated_at
+    ]]></query>
+
+    <query name="installmentGroup.insert"><![CDATA[
+        INSERT INTO installment_groups (
+            id,
+            user_id,
+            description,
+            total_amount,
+            total_installments,
+            first_due_date,
+            created_at
+        )
+        VALUES (
+            :id,
+            :userId,
+            :description,
+            :totalAmount,
+            :totalInstallments,
+            :firstDueDate,
+            :createdAt
+        )
+        RETURNING id
     ]]></query>
 
     <query name="expense.familyMemberBelongsToUser"><![CDATA[
