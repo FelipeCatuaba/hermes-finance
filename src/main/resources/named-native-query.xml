@@ -333,6 +333,142 @@
           AND (is_default = true OR user_id = :userId)
     ]]></query>
 
+    <query name="budget.findById"><![CDATA[
+        SELECT id,
+               user_id,
+               category_id,
+               month,
+               year,
+               amount_limit,
+               created_at
+        FROM budgets
+        WHERE id = :id
+        LIMIT 1
+    ]]></query>
+
+    <query name="budget.findByUserAndPeriod"><![CDATA[
+        SELECT id,
+               user_id,
+               category_id,
+               month,
+               year,
+               amount_limit,
+               created_at
+        FROM budgets
+        WHERE user_id = :userId
+          AND month = :month
+          AND year = :year
+        ORDER BY created_at ASC
+    ]]></query>
+
+    <query name="budget.upsert"><![CDATA[
+        INSERT INTO budgets (
+            id,
+            user_id,
+            category_id,
+            month,
+            year,
+            amount_limit,
+            created_at
+        )
+        VALUES (
+            gen_random_uuid(),
+            :userId,
+            :categoryId,
+            :month,
+            :year,
+            :amountLimit,
+            NOW()
+        )
+        ON CONFLICT (user_id, category_id, month, year)
+        DO UPDATE SET amount_limit = EXCLUDED.amount_limit
+        RETURNING id,
+                  user_id,
+                  category_id,
+                  month,
+                  year,
+                  amount_limit,
+                  created_at
+    ]]></query>
+
+    <query name="budget.update"><![CDATA[
+        UPDATE budgets
+        SET category_id = :categoryId,
+            month = :month,
+            year = :year,
+            amount_limit = :amountLimit
+        WHERE id = :id
+          AND user_id = :userId
+        RETURNING id,
+                  user_id,
+                  category_id,
+                  month,
+                  year,
+                  amount_limit,
+                  created_at
+    ]]></query>
+
+    <query name="budget.delete"><![CDATA[
+        DELETE FROM budgets
+        WHERE id = :id
+          AND user_id = :userId
+    ]]></query>
+
+    <query name="budget.categoryIsAccessible"><![CDATA[
+        SELECT COUNT(1)
+        FROM expense_categories
+        WHERE id = :categoryId
+          AND (is_default = true OR user_id = :userId)
+    ]]></query>
+
+    <query name="budget.status"><![CDATA[
+        SELECT c.id AS category_id,
+               c.name AS category_name,
+               c.icon AS category_icon,
+               c.color_hex AS category_color_hex,
+               b.id AS budget_id,
+               b.amount_limit,
+               COALESCE(SUM(e.amount), 0) AS spent_amount
+        FROM expense_categories c
+        LEFT JOIN budgets b ON b.category_id = c.id
+            AND b.user_id = :userId
+            AND b.month = :month
+            AND b.year = :year
+        LEFT JOIN expenses e ON e.category_id = c.id
+            AND e.user_id = :userId
+            AND e.expense_date >= :startDate
+            AND e.expense_date < :endDate
+        WHERE c.is_default = true
+           OR c.user_id = :userId
+        GROUP BY c.id, c.name, c.icon, c.color_hex, b.id, b.amount_limit
+        ORDER BY c.name ASC
+    ]]></query>
+
+    <query name="budget.copyPreviousMonth"><![CDATA[
+        INSERT INTO budgets (
+            id,
+            user_id,
+            category_id,
+            month,
+            year,
+            amount_limit,
+            created_at
+        )
+        SELECT gen_random_uuid(),
+               user_id,
+               category_id,
+               :toMonth,
+               :toYear,
+               amount_limit,
+               NOW()
+        FROM budgets
+        WHERE user_id = :userId
+          AND month = :fromMonth
+          AND year = :fromYear
+        ON CONFLICT (user_id, category_id, month, year)
+        DO UPDATE SET amount_limit = EXCLUDED.amount_limit
+    ]]></query>
+
     <query name="monthlyReport.incomeItems"><![CDATA[
         SELECT i.id,
                i.description,

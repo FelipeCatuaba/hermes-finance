@@ -25,6 +25,10 @@ public final class LoggingConstants {
     public static final String INCOME_UPDATED    = "INCOME_UPDATED";
     public static final String INCOME_DELETED    = "INCOME_DELETED";
 
+    // OrÃ§amentos
+    public static final String BUDGET_UPDATED    = "BUDGET_UPDATED";
+    public static final String BUDGET_DELETED    = "BUDGET_DELETED";
+
     // Sistema
     public static final String UNHANDLED_EXCEPTION = "UNHANDLED_EXCEPTION";
 }
