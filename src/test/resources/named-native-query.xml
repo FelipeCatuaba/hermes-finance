@@ -68,4 +68,59 @@
         SET active = false
         WHERE id = :id
     ]]></query>
+
+    <query name="expense.findByUserAndPeriod"><![CDATA[
+        SELECT e.id,
+               e.user_id,
+               e.family_member_id,
+               e.category_id,
+               e.installment_group_id,
+               e.description,
+               e.amount,
+               e.expense_date,
+               e.installment_number,
+               e.total_installments,
+               e.is_recurring,
+               e.is_fixed,
+               e.payment_method,
+               e.notes,
+               e.scope,
+               e.created_at,
+               e.updated_at,
+               c.name AS category_name,
+               c.icon AS category_icon,
+               c.color_hex AS category_color_hex,
+               fm.name AS family_member_name,
+               fm.relation AS family_member_relation
+        FROM expenses e
+        LEFT JOIN expense_categories c ON c.id = e.category_id
+        LEFT JOIN family_members fm ON fm.id = e.family_member_id
+        WHERE e.user_id = :userId
+          AND e.expense_date >= :startDate
+          AND e.expense_date < :endDate
+          AND (:categoryId IS NULL OR e.category_id = :categoryId)
+          AND (:familyMemberId IS NULL OR e.family_member_id = :familyMemberId)
+        ORDER BY e.expense_date DESC, e.created_at DESC
+        LIMIT :limit OFFSET :offset
+    ]]></query>
+
+    <query name="expense.countByUserAndPeriod"><![CDATA[
+        SELECT COUNT(1)
+        FROM expenses e
+        WHERE e.user_id = :userId
+          AND e.expense_date >= :startDate
+          AND e.expense_date < :endDate
+          AND (:categoryId IS NULL OR e.category_id = :categoryId)
+          AND (:familyMemberId IS NULL OR e.family_member_id = :familyMemberId)
+    ]]></query>
+
+    <query name="expense.sumByUserAndPeriod"><![CDATA[
+        SELECT COALESCE(SUM(e.amount), 0)
+        FROM expenses e
+        WHERE e.user_id = :userId
+          AND e.expense_date >= :startDate
+          AND e.expense_date < :endDate
+          AND (:categoryId IS NULL OR e.category_id = :categoryId)
+          AND (:familyMemberId IS NULL OR e.family_member_id = :familyMemberId)
+    ]]></query>
 </queries>

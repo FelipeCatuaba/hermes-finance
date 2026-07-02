@@ -3,6 +3,10 @@ package com.hermes.finance.domain.expense;
 import com.hermes.finance.domain.user.User;
 import com.hermes.finance.dto.request.ExpenseCreateRequest;
 import com.hermes.finance.dto.request.ExpenseInstallmentCreateRequest;
+import com.hermes.finance.dto.response.ExpenseCategorySummaryResponse;
+import com.hermes.finance.dto.response.ExpenseFamilyMemberSummaryResponse;
+import com.hermes.finance.dto.response.ExpenseListItemResponse;
+import com.hermes.finance.dto.response.ExpenseListResponse;
 import com.hermes.finance.dto.response.ExpenseResponse;
 import com.hermes.finance.logging.AppLogger;
 import com.hermes.finance.logging.LoggingConstants;
@@ -15,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +29,7 @@ import java.util.UUID;
 public class ExpenseService {
 
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999.99");
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final ExpenseRepositoryPort repository;
     private final SecurityUtils securityUtils;
@@ -33,6 +39,37 @@ public class ExpenseService {
         this.repository = repository;
         this.securityUtils = securityUtils;
         this.appLogger = appLogger;
+    }
+
+    public ExpenseListResponse list(int month, int year, UUID categoryId, UUID familyMemberId, int page, int size) {
+        YearMonth period = validatePeriod(month, year);
+        int validPage = validatePage(page);
+        int validSize = validatePageSize(size);
+
+        User currentUser = securityUtils.getCurrentUser();
+        validateReferences(familyMemberId, categoryId, currentUser.getId());
+
+        LocalDate startDate = period.atDay(1);
+        LocalDate endDate = period.plusMonths(1).atDay(1);
+        int offset = validPage * validSize;
+
+        List<ExpenseListItemResponse> items = repository.findByUserAndPeriod(
+                currentUser.getId(),
+                startDate,
+                endDate,
+                categoryId,
+                familyMemberId,
+                validSize,
+                offset
+            )
+            .stream()
+            .map(this::toListItemResponse)
+            .toList();
+        long total = repository.countByUserAndPeriod(currentUser.getId(), startDate, endDate, categoryId, familyMemberId);
+        BigDecimal totalAmount = repository.sumByUserAndPeriod(currentUser.getId(), startDate, endDate, categoryId, familyMemberId);
+        int totalPages = total == 0 ? 0 : (int) Math.ceil((double) total / validSize);
+
+        return new ExpenseListResponse(items, totalAmount, total, validPage, validSize, totalPages);
     }
 
     public ExpenseResponse create(ExpenseCreateRequest request) {
@@ -190,6 +227,30 @@ public class ExpenseService {
         }
     }
 
+    private YearMonth validatePeriod(int month, int year) {
+        if (month < 1 || month > 12) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mes invalido");
+        }
+        if (year < 1900 || year > 9999) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ano invalido");
+        }
+        return YearMonth.of(year, month);
+    }
+
+    private int validatePage(int page) {
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pagina invalida");
+        }
+        return page;
+    }
+
+    private int validatePageSize(int size) {
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tamanho de pagina invalido");
+        }
+        return size;
+    }
+
     private void validate(ExpenseCreateRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gasto e obrigatorio");
@@ -259,6 +320,38 @@ public class ExpenseService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private ExpenseListItemResponse toListItemResponse(ExpenseListItem expense) {
+        ExpenseCategorySummaryResponse category = expense.categoryId() == null ? null : new ExpenseCategorySummaryResponse(
+            expense.categoryId(),
+            expense.categoryName(),
+            expense.categoryIcon(),
+            expense.categoryColorHex()
+        );
+        ExpenseFamilyMemberSummaryResponse familyMember = expense.familyMemberId() == null ? null : new ExpenseFamilyMemberSummaryResponse(
+            expense.familyMemberId(),
+            expense.familyMemberName(),
+            expense.familyMemberRelation()
+        );
+
+        return new ExpenseListItemResponse(
+            expense.id(),
+            expense.description(),
+            expense.amount(),
+            expense.expenseDate(),
+            category,
+            familyMember,
+            expense.installmentGroupId(),
+            expense.installmentNumber(),
+            expense.totalInstallments(),
+            expense.paymentMethod(),
+            expense.notes(),
+            expense.fixed(),
+            expense.scope(),
+            expense.createdAt(),
+            expense.updatedAt()
+        );
     }
 
     private ExpenseResponse toResponse(Expense expense) {

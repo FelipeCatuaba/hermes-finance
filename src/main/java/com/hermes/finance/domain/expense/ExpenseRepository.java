@@ -6,7 +6,12 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +38,34 @@ public class ExpenseRepository implements ExpenseRepositoryPort {
         } catch (EmptyResultDataAccessException ex) {
             return Optional.empty();
         }
+    }
+
+    @Override
+    public List<ExpenseListItem> findByUserAndPeriod(UUID userId,
+                                                     LocalDate startDate,
+                                                     LocalDate endDate,
+                                                     UUID categoryId,
+                                                     UUID familyMemberId,
+                                                     int limit,
+                                                     int offset) {
+        String sql = nativeQueryCatalog.get("expense.findByUserAndPeriod");
+        return jdbcTemplate.query(sql, listParams(userId, startDate, endDate, categoryId, familyMemberId)
+            .addValue("limit", limit)
+            .addValue("offset", offset), this::mapListItem);
+    }
+
+    @Override
+    public long countByUserAndPeriod(UUID userId, LocalDate startDate, LocalDate endDate, UUID categoryId, UUID familyMemberId) {
+        String sql = nativeQueryCatalog.get("expense.countByUserAndPeriod");
+        Long total = jdbcTemplate.queryForObject(sql, listParams(userId, startDate, endDate, categoryId, familyMemberId), Long.class);
+        return total == null ? 0 : total;
+    }
+
+    @Override
+    public BigDecimal sumByUserAndPeriod(UUID userId, LocalDate startDate, LocalDate endDate, UUID categoryId, UUID familyMemberId) {
+        String sql = nativeQueryCatalog.get("expense.sumByUserAndPeriod");
+        BigDecimal total = jdbcTemplate.queryForObject(sql, listParams(userId, startDate, endDate, categoryId, familyMemberId), BigDecimal.class);
+        return total == null ? BigDecimal.ZERO : total;
     }
 
     @Override
@@ -176,5 +209,41 @@ public class ExpenseRepository implements ExpenseRepositoryPort {
             .addValue("paymentMethod", expense.getPaymentMethod())
             .addValue("notes", expense.getNotes())
             .addValue("scope", expense.getScope());
+    }
+
+    private MapSqlParameterSource listParams(UUID userId, LocalDate startDate, LocalDate endDate, UUID categoryId, UUID familyMemberId) {
+        return new MapSqlParameterSource()
+            .addValue("userId", userId)
+            .addValue("startDate", startDate)
+            .addValue("endDate", endDate)
+            .addValue("categoryId", categoryId)
+            .addValue("familyMemberId", familyMemberId);
+    }
+
+    private ExpenseListItem mapListItem(ResultSet rs, int rowNum) throws SQLException {
+        Number installmentNumber = (Number) rs.getObject("installment_number");
+        Number totalInstallments = (Number) rs.getObject("total_installments");
+        return new ExpenseListItem(
+            rs.getObject("id", UUID.class),
+            rs.getString("description"),
+            rs.getBigDecimal("amount"),
+            rs.getObject("expense_date", LocalDate.class),
+            rs.getObject("category_id", UUID.class),
+            rs.getString("category_name"),
+            rs.getString("category_icon"),
+            rs.getString("category_color_hex"),
+            rs.getObject("family_member_id", UUID.class),
+            rs.getString("family_member_name"),
+            rs.getString("family_member_relation"),
+            rs.getObject("installment_group_id", UUID.class),
+            installmentNumber == null ? null : installmentNumber.intValue(),
+            totalInstallments == null ? null : totalInstallments.intValue(),
+            rs.getString("payment_method"),
+            rs.getString("notes"),
+            rs.getBoolean("is_fixed"),
+            rs.getString("scope"),
+            rs.getObject("created_at", OffsetDateTime.class),
+            rs.getObject("updated_at", OffsetDateTime.class)
+        );
     }
 }
