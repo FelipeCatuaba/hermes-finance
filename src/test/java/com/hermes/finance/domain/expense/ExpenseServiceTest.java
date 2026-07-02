@@ -3,6 +3,7 @@ package com.hermes.finance.domain.expense;
 import com.hermes.finance.domain.user.User;
 import com.hermes.finance.dto.request.ExpenseCreateRequest;
 import com.hermes.finance.dto.request.ExpenseInstallmentCreateRequest;
+import com.hermes.finance.dto.response.ExpenseListResponse;
 import com.hermes.finance.dto.response.ExpenseResponse;
 import com.hermes.finance.logging.AppLogger;
 import com.hermes.finance.logging.LoggingConstants;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -144,6 +146,51 @@ class ExpenseServiceTest {
         assertFalse(context.containsKey("amount"));
         assertFalse(context.containsKey("description"));
         assertFalse(context.containsKey("notes"));
+    }
+
+    @Test
+    void shouldListExpensesByPeriodWithFiltersAndPaginationMetadata() {
+        LocalDate startDate = LocalDate.of(2026, 3, 1);
+        LocalDate endDate = LocalDate.of(2026, 4, 1);
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.categoryIsAccessible(CATEGORY_ID, USER_ID)).thenReturn(true);
+        when(repository.familyMemberBelongsToUser(MEMBER_ID, USER_ID)).thenReturn(true);
+        when(repository.findByUserAndPeriod(USER_ID, startDate, endDate, CATEGORY_ID, MEMBER_ID, 10, 10))
+            .thenReturn(List.of(listItem()));
+        when(repository.countByUserAndPeriod(USER_ID, startDate, endDate, CATEGORY_ID, MEMBER_ID)).thenReturn(21L);
+        when(repository.sumByUserAndPeriod(USER_ID, startDate, endDate, CATEGORY_ID, MEMBER_ID)).thenReturn(new BigDecimal("450.75"));
+
+        ExpenseListResponse response = service.list(3, 2026, CATEGORY_ID, MEMBER_ID, 1, 10);
+
+        assertEquals(1, response.items().size());
+        assertEquals(new BigDecimal("450.75"), response.totalAmount());
+        assertEquals(21L, response.total());
+        assertEquals(1, response.page());
+        assertEquals(10, response.size());
+        assertEquals(3, response.totalPages());
+        assertEquals("Alimentacao", response.items().get(0).category().name());
+        assertEquals("Isa", response.items().get(0).familyMember().name());
+        assertEquals("2/12", response.items().get(0).installmentNumber() + "/" + response.items().get(0).totalInstallments());
+    }
+
+    @Test
+    void shouldRejectListFilterForFamilyMemberFromAnotherUser() {
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.familyMemberBelongsToUser(MEMBER_ID, USER_ID)).thenReturn(false);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> service.list(3, 2026, null, MEMBER_ID, 0, 20));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        verify(repository, never()).findByUserAndPeriod(any(), any(), any(), any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    void shouldRejectInvalidListPeriodAndPagination() {
+        assertThrows(ResponseStatusException.class, () -> service.list(13, 2026, null, null, 0, 20));
+        assertThrows(ResponseStatusException.class, () -> service.list(3, 1899, null, null, 0, 20));
+        assertThrows(ResponseStatusException.class, () -> service.list(3, 2026, null, null, -1, 20));
+        assertThrows(ResponseStatusException.class, () -> service.list(3, 2026, null, null, 0, 101));
     }
 
     @Test
@@ -425,6 +472,31 @@ class ExpenseServiceTest {
                                                                     Integer totalInstallments,
                                                                     LocalDate firstDueDate) {
         return new ExpenseInstallmentCreateRequest("Compra", totalAmount, totalInstallments, firstDueDate, categoryId, memberId, "card");
+    }
+
+    private ExpenseListItem listItem() {
+        return new ExpenseListItem(
+            EXPENSE_ID,
+            "Mercado",
+            new BigDecimal("120.50"),
+            LocalDate.of(2026, 3, 10),
+            CATEGORY_ID,
+            "Alimentacao",
+            "shopping-cart",
+            "#5b82ff",
+            MEMBER_ID,
+            "Isa",
+            "Filha",
+            GROUP_ID,
+            2,
+            12,
+            "card",
+            "notes",
+            true,
+            "family",
+            OffsetDateTime.now(),
+            OffsetDateTime.now()
+        );
     }
 
     private User user() {
