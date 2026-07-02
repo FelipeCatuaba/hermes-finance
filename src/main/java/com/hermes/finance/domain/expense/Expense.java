@@ -11,9 +11,13 @@ public class Expense {
     private UUID userId;
     private UUID familyMemberId;
     private UUID categoryId;
+    private UUID installmentGroupId;
     private String description;
     private BigDecimal amount;
     private LocalDate expenseDate;
+    private Integer installmentNumber;
+    private Integer totalInstallments;
+    private boolean recurring;
     private boolean fixed;
     private String paymentMethod;
     private String notes;
@@ -33,6 +37,9 @@ public class Expense {
     public UUID getCategoryId() { return categoryId; }
     public void setCategoryId(UUID categoryId) { this.categoryId = categoryId; }
 
+    public UUID getInstallmentGroupId() { return installmentGroupId; }
+    public void setInstallmentGroupId(UUID installmentGroupId) { this.installmentGroupId = installmentGroupId; }
+
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
@@ -41,6 +48,15 @@ public class Expense {
 
     public LocalDate getExpenseDate() { return expenseDate; }
     public void setExpenseDate(LocalDate expenseDate) { this.expenseDate = expenseDate; }
+
+    public Integer getInstallmentNumber() { return installmentNumber; }
+    public void setInstallmentNumber(Integer installmentNumber) { this.installmentNumber = installmentNumber; }
+
+    public Integer getTotalInstallments() { return totalInstallments; }
+    public void setTotalInstallments(Integer totalInstallments) { this.totalInstallments = totalInstallments; }
+
+    public boolean isRecurring() { return recurring; }
+    public void setRecurring(boolean recurring) { this.recurring = recurring; }
 
     public boolean isFixed() { return fixed; }
     public void setFixed(boolean fixed) { this.fixed = fixed; }

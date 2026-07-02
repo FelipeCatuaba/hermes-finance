@@ -1,6 +1,7 @@
 package com.hermes.finance.domain.expense;
 
 import com.hermes.finance.dto.request.ExpenseCreateRequest;
+import com.hermes.finance.dto.request.ExpenseInstallmentCreateRequest;
 import com.hermes.finance.dto.response.ExpenseResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/expenses")
@@ -24,5 +27,11 @@ public class ExpenseController {
     @ResponseStatus(HttpStatus.CREATED)
     public ExpenseResponse create(@Valid @RequestBody ExpenseCreateRequest request) {
         return service.create(request);
+    }
+
+    @PostMapping("/installments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<ExpenseResponse> createInstallments(@Valid @RequestBody ExpenseInstallmentCreateRequest request) {
+        return service.createInstallments(request);
     }
 }

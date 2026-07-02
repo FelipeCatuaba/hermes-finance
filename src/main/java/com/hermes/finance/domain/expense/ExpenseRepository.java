@@ -34,9 +34,13 @@ public class ExpenseRepository implements ExpenseRepositoryPort {
             .addValue("userId", expense.getUserId())
             .addValue("familyMemberId", expense.getFamilyMemberId())
             .addValue("categoryId", expense.getCategoryId())
+            .addValue("installmentGroupId", expense.getInstallmentGroupId())
             .addValue("description", expense.getDescription())
             .addValue("amount", expense.getAmount())
             .addValue("expenseDate", expense.getExpenseDate())
+            .addValue("installmentNumber", expense.getInstallmentNumber())
+            .addValue("totalInstallments", expense.getTotalInstallments())
+            .addValue("isRecurring", expense.isRecurring())
             .addValue("isFixed", expense.isFixed())
             .addValue("paymentMethod", expense.getPaymentMethod())
             .addValue("notes", expense.getNotes())
@@ -49,6 +53,29 @@ public class ExpenseRepository implements ExpenseRepositoryPort {
             throw new IllegalStateException("Expense insert did not return a row");
         }
         return saved;
+    }
+
+    @Override
+    public UUID createInstallmentGroup(UUID userId,
+                                       String description,
+                                       java.math.BigDecimal totalAmount,
+                                       int totalInstallments,
+                                       java.time.LocalDate firstDueDate) {
+        UUID id = UUID.randomUUID();
+        String sql = nativeQueryCatalog.get("installmentGroup.insert");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("userId", userId)
+            .addValue("description", description)
+            .addValue("totalAmount", totalAmount)
+            .addValue("totalInstallments", totalInstallments)
+            .addValue("firstDueDate", firstDueDate)
+            .addValue("createdAt", OffsetDateTime.now());
+        UUID savedId = jdbcTemplate.queryForObject(sql, params, UUID.class);
+        if (savedId == null) {
+            throw new IllegalStateException("Installment group insert did not return an id");
+        }
+        return savedId;
     }
 
     @Override
