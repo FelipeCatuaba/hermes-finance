@@ -12,4 +12,7 @@ public interface MonthlyReportRepositoryPort {
     BigDecimal sumOwnerExpenses(UUID userId, LocalDate startDate, LocalDate endDate);
     List<MonthlyFamilyExpense> sumFamilyExpensesByMember(UUID userId, LocalDate startDate, LocalDate endDate);
     BigDecimal sumFamilyExpenses(UUID userId, LocalDate startDate, LocalDate endDate);
+    List<YearlyReportAmount> sumIncomeByMonth(UUID userId, LocalDate startDate, LocalDate endDate);
+    List<YearlyReportAmount> sumOwnerExpensesByMonth(UUID userId, LocalDate startDate, LocalDate endDate);
+    List<YearlyReportAmount> sumFamilyExpensesByMonth(UUID userId, LocalDate startDate, LocalDate endDate);
 }

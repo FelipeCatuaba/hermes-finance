@@ -2,6 +2,7 @@ package com.hermes.finance.domain.report;
 
 import com.hermes.finance.domain.user.User;
 import com.hermes.finance.dto.response.MonthlyReportResponse;
+import com.hermes.finance.dto.response.YearlyReportResponse;
 import com.hermes.finance.util.SecurityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class MonthlyReportServiceTest {
@@ -113,6 +115,63 @@ class MonthlyReportServiceTest {
         ResponseStatusException invalidYear = assertThrows(ResponseStatusException.class, () -> service.getMonthlyReport(3, 1899));
 
         assertEquals(HttpStatus.BAD_REQUEST, invalidMonth.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, invalidYear.getStatusCode());
+    }
+
+    @Test
+    void shouldBuildYearlyReportWithAllMonthsAndEmptyMonthsZeroed() {
+        LocalDate startDate = LocalDate.of(2026, 1, 1);
+        LocalDate endDate = LocalDate.of(2027, 1, 1);
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.sumIncomeByMonth(USER_ID, startDate, endDate)).thenReturn(List.of(
+            new YearlyReportAmount(1, new BigDecimal("1000.00")),
+            new YearlyReportAmount(3, new BigDecimal("2000.00"))
+        ));
+        when(repository.sumOwnerExpensesByMonth(USER_ID, startDate, endDate)).thenReturn(List.of(
+            new YearlyReportAmount(1, new BigDecimal("250.00"))
+        ));
+        when(repository.sumFamilyExpensesByMonth(USER_ID, startDate, endDate)).thenReturn(List.of(
+            new YearlyReportAmount(3, new BigDecimal("400.00"))
+        ));
+
+        YearlyReportResponse response = service.getYearlyReport(2026);
+
+        assertEquals(2026, response.year());
+        assertEquals(12, response.months().size());
+        assertEquals(new BigDecimal("1000.00"), response.months().get(0).incomeTotal());
+        assertEquals(new BigDecimal("250.00"), response.months().get(0).ownerExpensesTotal());
+        assertEquals(BigDecimal.ZERO, response.months().get(0).familyExpensesTotal());
+        assertEquals(new BigDecimal("75.00"), response.months().get(0).savingsRate());
+        assertEquals(BigDecimal.ZERO, response.months().get(1).incomeTotal());
+        assertEquals(BigDecimal.ZERO, response.months().get(1).ownerExpensesTotal());
+        assertEquals(BigDecimal.ZERO, response.months().get(1).familyExpensesTotal());
+        assertNull(response.months().get(1).savingsRate());
+        assertEquals(new BigDecimal("400.00"), response.months().get(2).familyExpensesTotal());
+    }
+
+    @Test
+    void shouldCalculateYearlySavingsFromOwnerExpensesAndKeepFamilyExpensesSeparate() {
+        LocalDate startDate = LocalDate.of(2026, 1, 1);
+        LocalDate endDate = LocalDate.of(2027, 1, 1);
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.sumIncomeByMonth(USER_ID, startDate, endDate)).thenReturn(List.of(new YearlyReportAmount(5, new BigDecimal("1000.00"))));
+        when(repository.sumOwnerExpensesByMonth(USER_ID, startDate, endDate)).thenReturn(List.of(new YearlyReportAmount(5, new BigDecimal("200.00"))));
+        when(repository.sumFamilyExpensesByMonth(USER_ID, startDate, endDate)).thenReturn(List.of(new YearlyReportAmount(5, new BigDecimal("300.00"))));
+
+        YearlyReportResponse.MonthSummary may = service.getYearlyReport(2026).months().get(4);
+
+        assertEquals(new BigDecimal("200.00"), may.ownerExpensesTotal());
+        assertEquals(new BigDecimal("300.00"), may.familyExpensesTotal());
+        assertEquals(new BigDecimal("80.00"), may.savingsRate());
+        verify(repository).sumIncomeByMonth(USER_ID, startDate, endDate);
+        verify(repository).sumOwnerExpensesByMonth(USER_ID, startDate, endDate);
+        verify(repository).sumFamilyExpensesByMonth(USER_ID, startDate, endDate);
+    }
+
+    @Test
+    void shouldRejectInvalidYearlyReportYear() {
+        ResponseStatusException invalidYear = assertThrows(ResponseStatusException.class, () -> service.getYearlyReport(1899));
+
         assertEquals(HttpStatus.BAD_REQUEST, invalidYear.getStatusCode());
     }
 
