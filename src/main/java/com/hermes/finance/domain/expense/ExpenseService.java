@@ -3,6 +3,7 @@ package com.hermes.finance.domain.expense;
 import com.hermes.finance.domain.user.User;
 import com.hermes.finance.dto.request.ExpenseCreateRequest;
 import com.hermes.finance.dto.request.ExpenseInstallmentCreateRequest;
+import com.hermes.finance.dto.response.ExpenseBulkCreateResponse;
 import com.hermes.finance.dto.response.ExpenseCategorySummaryResponse;
 import com.hermes.finance.dto.response.ExpenseFamilyMemberSummaryResponse;
 import com.hermes.finance.dto.response.ExpenseListItemResponse;
@@ -21,6 +22,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,6 +32,7 @@ public class ExpenseService {
 
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999.99");
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_BULK_ITEMS = 50;
 
     private final ExpenseRepositoryPort repository;
     private final SecurityUtils securityUtils;
@@ -104,6 +107,52 @@ public class ExpenseService {
         ));
 
         return toResponse(saved);
+    }
+
+    public ExpenseBulkCreateResponse bulkCreate(List<ExpenseCreateRequest> requests) {
+        if (requests == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lista de gastos e obrigatoria");
+        }
+        if (requests.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lista de gastos nao pode estar vazia");
+        }
+        if (requests.size() > MAX_BULK_ITEMS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Importacao limitada a 50 gastos por envio");
+        }
+
+        User currentUser = securityUtils.getCurrentUser();
+        Map<UUID, Boolean> categoryAccessCache = new HashMap<>();
+        Map<UUID, Boolean> familyMemberAccessCache = new HashMap<>();
+        List<ExpenseResponse> created = new ArrayList<>();
+        List<ExpenseBulkCreateResponse.ItemError> errors = new ArrayList<>();
+        int failedCount = 0;
+
+        for (int index = 0; index < requests.size(); index++) {
+            ExpenseCreateRequest request = requests.get(index);
+            List<ExpenseBulkCreateResponse.ItemError> itemErrors = validateBulkItem(
+                index,
+                request,
+                currentUser.getId(),
+                categoryAccessCache,
+                familyMemberAccessCache
+            );
+
+            if (!itemErrors.isEmpty()) {
+                failedCount++;
+                errors.addAll(itemErrors);
+                continue;
+            }
+
+            Expense saved = repository.save(toExpense(request, currentUser.getId()));
+            created.add(toResponse(saved));
+        }
+
+        appLogger.info(LoggingConstants.EXPENSE_CREATED, Map.of(
+            "bulkCreated", created.size(),
+            "bulkFailed", failedCount
+        ));
+
+        return new ExpenseBulkCreateResponse(created.size(), failedCount, created, errors);
     }
 
     public ExpenseResponse update(UUID id, ExpenseCreateRequest request) {
@@ -275,6 +324,52 @@ public class ExpenseService {
         }
     }
 
+    private List<ExpenseBulkCreateResponse.ItemError> validateBulkItem(int index,
+                                                                       ExpenseCreateRequest request,
+                                                                       UUID userId,
+                                                                       Map<UUID, Boolean> categoryAccessCache,
+                                                                       Map<UUID, Boolean> familyMemberAccessCache) {
+        List<ExpenseBulkCreateResponse.ItemError> errors = new ArrayList<>();
+        if (request == null) {
+            errors.add(new ExpenseBulkCreateResponse.ItemError(index, "item", "Gasto e obrigatorio"));
+            return errors;
+        }
+        if (request.description() == null || request.description().trim().isEmpty()) {
+            errors.add(new ExpenseBulkCreateResponse.ItemError(index, "description", "Descricao e obrigatoria"));
+        } else if (request.description().trim().length() > 255) {
+            errors.add(new ExpenseBulkCreateResponse.ItemError(index, "description", "Descricao deve ter no maximo 255 caracteres"));
+        }
+        if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            errors.add(new ExpenseBulkCreateResponse.ItemError(index, "amount", "Valor deve ser maior que zero"));
+        } else if (request.amount().compareTo(MAX_AMOUNT) > 0) {
+            errors.add(new ExpenseBulkCreateResponse.ItemError(index, "amount", "Valor excede o limite permitido"));
+        }
+        if (request.expenseDate() == null) {
+            errors.add(new ExpenseBulkCreateResponse.ItemError(index, "expenseDate", "Data do gasto e obrigatoria"));
+        } else if (request.expenseDate().isAfter(LocalDate.now())) {
+            errors.add(new ExpenseBulkCreateResponse.ItemError(index, "expenseDate", "Data futura nao permitida"));
+        }
+        if (request.familyMemberId() != null) {
+            boolean belongsToUser = familyMemberAccessCache.computeIfAbsent(
+                request.familyMemberId(),
+                memberId -> repository.familyMemberBelongsToUser(memberId, userId)
+            );
+            if (!belongsToUser) {
+                errors.add(new ExpenseBulkCreateResponse.ItemError(index, "familyMemberId", "Membro nao pertence ao usuario"));
+            }
+        }
+        if (request.categoryId() != null) {
+            boolean categoryIsAccessible = categoryAccessCache.computeIfAbsent(
+                request.categoryId(),
+                categoryId -> repository.categoryIsAccessible(categoryId, userId)
+            );
+            if (!categoryIsAccessible) {
+                errors.add(new ExpenseBulkCreateResponse.ItemError(index, "categoryId", "Categoria nao acessivel ao usuario"));
+            }
+        }
+        return errors;
+    }
+
     private void validateInstallment(ExpenseInstallmentCreateRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parcelamento e obrigatorio");
@@ -320,6 +415,21 @@ public class ExpenseService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private Expense toExpense(ExpenseCreateRequest request, UUID userId) {
+        Expense expense = new Expense();
+        expense.setUserId(userId);
+        expense.setDescription(request.description().trim());
+        expense.setAmount(request.amount());
+        expense.setExpenseDate(request.expenseDate());
+        expense.setCategoryId(request.categoryId());
+        expense.setFamilyMemberId(request.familyMemberId());
+        expense.setPaymentMethod(trimToNull(request.paymentMethod()));
+        expense.setNotes(trimToNull(request.notes()));
+        expense.setFixed(Boolean.TRUE.equals(request.isFixed()));
+        expense.setScope(request.familyMemberId() == null ? "owner" : "family");
+        return expense;
     }
 
     private ExpenseListItemResponse toListItemResponse(ExpenseListItem expense) {

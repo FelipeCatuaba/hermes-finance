@@ -3,6 +3,7 @@ package com.hermes.finance.domain.expense;
 import com.hermes.finance.domain.user.User;
 import com.hermes.finance.dto.request.ExpenseCreateRequest;
 import com.hermes.finance.dto.request.ExpenseInstallmentCreateRequest;
+import com.hermes.finance.dto.response.ExpenseBulkCreateResponse;
 import com.hermes.finance.dto.response.ExpenseListResponse;
 import com.hermes.finance.dto.response.ExpenseResponse;
 import com.hermes.finance.logging.AppLogger;
@@ -131,6 +132,55 @@ class ExpenseServiceTest {
         assertThrows(ResponseStatusException.class, () -> service.create(validRequest(null, null, BigDecimal.ZERO, LocalDate.now(), "Mercado")));
         assertThrows(ResponseStatusException.class, () -> service.create(validRequest(null, null, BigDecimal.ONE, LocalDate.now().plusDays(1), "Mercado")));
         assertThrows(ResponseStatusException.class, () -> service.create(validRequest(null, null, BigDecimal.ONE, LocalDate.now(), " ")));
+    }
+
+    @Test
+    void shouldBulkCreateValidExpensesAndReportInvalidItemsWithoutCancelingBatch() {
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.categoryIsAccessible(CATEGORY_ID, USER_ID)).thenReturn(true);
+        when(repository.save(any(Expense.class))).thenAnswer(invocation -> persisted(invocation.getArgument(0)));
+
+        ExpenseBulkCreateResponse response = service.bulkCreate(List.of(
+            validRequest(CATEGORY_ID, null),
+            validRequest(null, null, BigDecimal.ZERO, LocalDate.now().plusDays(1), " ")
+        ));
+
+        assertEquals(1, response.createdCount());
+        assertEquals(1, response.failedCount());
+        assertEquals(1, response.created().size());
+        assertEquals(3, response.errors().size());
+        assertEquals(1, response.errors().get(0).index());
+        assertEquals("description", response.errors().get(0).field());
+        assertEquals("amount", response.errors().get(1).field());
+        assertEquals("expenseDate", response.errors().get(2).field());
+
+        ArgumentCaptor<Expense> expenseCaptor = ArgumentCaptor.forClass(Expense.class);
+        verify(repository).save(expenseCaptor.capture());
+        assertEquals(USER_ID, expenseCaptor.getValue().getUserId());
+        assertEquals("owner", expenseCaptor.getValue().getScope());
+    }
+
+    @Test
+    void shouldRejectBulkItemWithInaccessibleReferences() {
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.categoryIsAccessible(CATEGORY_ID, USER_ID)).thenReturn(false);
+        when(repository.familyMemberBelongsToUser(MEMBER_ID, USER_ID)).thenReturn(false);
+
+        ExpenseBulkCreateResponse response = service.bulkCreate(List.of(validRequest(CATEGORY_ID, MEMBER_ID)));
+
+        assertEquals(0, response.createdCount());
+        assertEquals(1, response.failedCount());
+        assertEquals(List.of("familyMemberId", "categoryId"), response.errors().stream().map(ExpenseBulkCreateResponse.ItemError::field).toList());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectBulkRequestAboveLimit() {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> service.bulkCreate(java.util.Collections.nCopies(51, validRequest(null, null))));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        verify(repository, never()).save(any());
     }
 
     @Test
