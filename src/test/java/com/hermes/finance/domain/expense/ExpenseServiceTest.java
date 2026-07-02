@@ -13,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -21,6 +22,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,6 +40,8 @@ import static org.mockito.Mockito.when;
 class ExpenseServiceTest {
 
     private static final UUID USER_ID = UUID.fromString("0f35ce81-2f92-4547-baf5-9011cb879413");
+    private static final UUID OTHER_USER_ID = UUID.fromString("62212dbc-38db-4bfa-a986-d3a2c560420a");
+    private static final UUID EXPENSE_ID = UUID.fromString("379ab046-4034-4f4a-a455-5868dde8f5bb");
     private static final UUID CATEGORY_ID = UUID.fromString("2c34ed5d-8d9f-4e7f-87e3-a34be90d60cb");
     private static final UUID MEMBER_ID = UUID.fromString("8bd15f7b-6cf3-4a95-8bc7-d244807e4620");
     private static final UUID GROUP_ID = UUID.fromString("6fcd1116-0357-4ba3-9617-ac65d32a054b");
@@ -140,6 +144,135 @@ class ExpenseServiceTest {
         assertFalse(context.containsKey("amount"));
         assertFalse(context.containsKey("description"));
         assertFalse(context.containsKey("notes"));
+    }
+
+    @Test
+    void shouldUpdateExpenseAndRecalculateScopeToOwnerWhenMemberRemoved() {
+        Expense existing = ownedExpense();
+        existing.setFamilyMemberId(MEMBER_ID);
+        existing.setScope("family");
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findById(EXPENSE_ID)).thenReturn(Optional.of(existing));
+        when(repository.categoryIsAccessible(CATEGORY_ID, USER_ID)).thenReturn(true);
+        when(repository.update(any(Expense.class))).thenAnswer(invocation -> Optional.of(persisted(invocation.getArgument(0))));
+
+        ExpenseResponse response = service.update(EXPENSE_ID, new ExpenseCreateRequest(
+            " Mercado atualizado ",
+            new BigDecimal("150.00"),
+            LocalDate.now(),
+            CATEGORY_ID,
+            null,
+            " pix ",
+            " observacao ",
+            false
+        ));
+
+        ArgumentCaptor<Expense> expenseCaptor = ArgumentCaptor.forClass(Expense.class);
+        verify(repository).update(expenseCaptor.capture());
+        Expense updated = expenseCaptor.getValue();
+        assertEquals("owner", updated.getScope());
+        assertEquals(null, updated.getFamilyMemberId());
+        assertEquals("Mercado atualizado", updated.getDescription());
+        assertEquals("pix", updated.getPaymentMethod());
+        assertEquals("owner", response.scope());
+        verify(appLogger).info(eq(LoggingConstants.EXPENSE_UPDATED), eq(Map.of(
+            "expenseId", EXPENSE_ID,
+            "scope", "owner"
+        )));
+    }
+
+    @Test
+    void shouldUpdateExpenseAndRecalculateScopeToFamilyWhenMemberAdded() {
+        Expense existing = ownedExpense();
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findById(EXPENSE_ID)).thenReturn(Optional.of(existing));
+        when(repository.familyMemberBelongsToUser(MEMBER_ID, USER_ID)).thenReturn(true);
+        when(repository.update(any(Expense.class))).thenAnswer(invocation -> Optional.of(persisted(invocation.getArgument(0))));
+
+        ExpenseResponse response = service.update(EXPENSE_ID, validRequest(null, MEMBER_ID));
+
+        ArgumentCaptor<Expense> expenseCaptor = ArgumentCaptor.forClass(Expense.class);
+        verify(repository).update(expenseCaptor.capture());
+        assertEquals("family", expenseCaptor.getValue().getScope());
+        assertEquals(MEMBER_ID, expenseCaptor.getValue().getFamilyMemberId());
+        assertEquals("family", response.scope());
+    }
+
+    @Test
+    void shouldRejectUpdateForExpenseFromAnotherUserWithForbidden() {
+        Expense existing = ownedExpense();
+        existing.setUserId(OTHER_USER_ID);
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findById(EXPENSE_ID)).thenReturn(Optional.of(existing));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> service.update(EXPENSE_ID, validRequest(null, null)));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void shouldDeleteOwnedExpenseOnly() {
+        Expense existing = ownedExpense();
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findById(EXPENSE_ID)).thenReturn(Optional.of(existing));
+
+        service.delete(EXPENSE_ID);
+
+        verify(repository).delete(EXPENSE_ID, USER_ID);
+        verify(appLogger).info(eq(LoggingConstants.EXPENSE_DELETED), eq(Map.of(
+            "expenseId", EXPENSE_ID,
+            "scope", "owner"
+        )));
+    }
+
+    @Test
+    void shouldRejectDeleteForExpenseFromAnotherUserWithForbidden() {
+        Expense existing = ownedExpense();
+        existing.setUserId(OTHER_USER_ID);
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findById(EXPENSE_ID)).thenReturn(Optional.of(existing));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> service.delete(EXPENSE_ID));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        verify(repository, never()).delete(any(), any());
+    }
+
+    @Test
+    void shouldDeleteOwnedInstallmentGroup() {
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findInstallmentGroupUserId(GROUP_ID)).thenReturn(Optional.of(USER_ID));
+
+        service.deleteInstallmentGroup(GROUP_ID);
+
+        verify(repository).deleteExpensesByInstallmentGroup(GROUP_ID, USER_ID);
+        verify(repository).deleteInstallmentGroup(GROUP_ID, USER_ID);
+        verify(appLogger).info(eq(LoggingConstants.EXPENSE_DELETED), eq(Map.of("installmentGroupId", GROUP_ID)));
+    }
+
+    @Test
+    void shouldRejectInstallmentGroupDeletionFromAnotherUserWithForbidden() {
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findInstallmentGroupUserId(GROUP_ID)).thenReturn(Optional.of(OTHER_USER_ID));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> service.deleteInstallmentGroup(GROUP_ID));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        verify(repository, never()).deleteExpensesByInstallmentGroup(any(), any());
+        verify(repository, never()).deleteInstallmentGroup(any(), any());
+    }
+
+    @Test
+    void shouldMarkInstallmentGroupDeletionAsTransactional() throws NoSuchMethodException {
+        boolean transactional = ExpenseService.class
+            .getMethod("deleteInstallmentGroup", UUID.class)
+            .isAnnotationPresent(Transactional.class);
+
+        assertTrue(transactional);
     }
 
     @Test
@@ -300,8 +433,21 @@ class ExpenseServiceTest {
         return user;
     }
 
+    private Expense ownedExpense() {
+        Expense expense = new Expense();
+        expense.setId(EXPENSE_ID);
+        expense.setUserId(USER_ID);
+        expense.setDescription("Mercado");
+        expense.setAmount(new BigDecimal("50.00"));
+        expense.setExpenseDate(LocalDate.now());
+        expense.setPaymentMethod("card");
+        expense.setNotes("notes");
+        expense.setScope("owner");
+        return expense;
+    }
+
     private Expense persisted(Expense expense) {
-        expense.setId(UUID.fromString("379ab046-4034-4f4a-a455-5868dde8f5bb"));
+        expense.setId(EXPENSE_ID);
         expense.setCreatedAt(OffsetDateTime.now());
         expense.setUpdatedAt(OffsetDateTime.now());
         return expense;

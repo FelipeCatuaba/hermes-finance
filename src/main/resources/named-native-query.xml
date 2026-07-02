@@ -127,6 +127,68 @@
                   updated_at
     ]]></query>
 
+    <query name="expense.findById"><![CDATA[
+        SELECT id,
+               user_id,
+               family_member_id,
+               category_id,
+               installment_group_id,
+               description,
+               amount,
+               expense_date,
+               installment_number,
+               total_installments,
+               is_recurring,
+               is_fixed,
+               payment_method,
+               notes,
+               scope,
+               created_at,
+               updated_at
+        FROM expenses
+        WHERE id = :id
+        LIMIT 1
+    ]]></query>
+
+    <query name="expense.update"><![CDATA[
+        UPDATE expenses
+        SET family_member_id = :familyMemberId,
+            category_id = :categoryId,
+            description = :description,
+            amount = :amount,
+            expense_date = :expenseDate,
+            is_fixed = :isFixed,
+            payment_method = :paymentMethod,
+            notes = :notes,
+            scope = :scope,
+            updated_at = :updatedAt
+        WHERE id = :id
+          AND user_id = :userId
+        RETURNING id,
+                  user_id,
+                  family_member_id,
+                  category_id,
+                  installment_group_id,
+                  description,
+                  amount,
+                  expense_date,
+                  installment_number,
+                  total_installments,
+                  is_recurring,
+                  is_fixed,
+                  payment_method,
+                  notes,
+                  scope,
+                  created_at,
+                  updated_at
+    ]]></query>
+
+    <query name="expense.delete"><![CDATA[
+        DELETE FROM expenses
+        WHERE id = :id
+          AND user_id = :userId
+    ]]></query>
+
     <query name="installmentGroup.insert"><![CDATA[
         INSERT INTO installment_groups (
             id,
@@ -147,6 +209,25 @@
             :createdAt
         )
         RETURNING id
+    ]]></query>
+
+    <query name="installmentGroup.findUserIdById"><![CDATA[
+        SELECT user_id
+        FROM installment_groups
+        WHERE id = :id
+        LIMIT 1
+    ]]></query>
+
+    <query name="installmentGroup.deleteExpenses"><![CDATA[
+        DELETE FROM expenses
+        WHERE installment_group_id = :id
+          AND user_id = :userId
+    ]]></query>
+
+    <query name="installmentGroup.delete"><![CDATA[
+        DELETE FROM installment_groups
+        WHERE id = :id
+          AND user_id = :userId
     ]]></query>
 
     <query name="expense.familyMemberBelongsToUser"><![CDATA[
