@@ -69,19 +69,64 @@ public class ExpenseService {
         return toResponse(saved);
     }
 
+    public ExpenseResponse update(UUID id, ExpenseCreateRequest request) {
+        validate(request);
+
+        Expense existing = requireOwnedExpense(id);
+        User currentUser = securityUtils.getCurrentUser();
+        validateReferences(request.familyMemberId(), request.categoryId(), currentUser.getId());
+
+        existing.setDescription(request.description().trim());
+        existing.setAmount(request.amount());
+        existing.setExpenseDate(request.expenseDate());
+        existing.setCategoryId(request.categoryId());
+        existing.setFamilyMemberId(request.familyMemberId());
+        existing.setPaymentMethod(trimToNull(request.paymentMethod()));
+        existing.setNotes(trimToNull(request.notes()));
+        existing.setFixed(Boolean.TRUE.equals(request.isFixed()));
+        existing.setScope(request.familyMemberId() == null ? "owner" : "family");
+
+        Expense updated = repository.update(existing)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gasto nao encontrado"));
+
+        appLogger.info(LoggingConstants.EXPENSE_UPDATED, Map.of(
+            "expenseId", updated.getId(),
+            "scope", updated.getScope()
+        ));
+
+        return toResponse(updated);
+    }
+
+    public void delete(UUID id) {
+        Expense existing = requireOwnedExpense(id);
+        repository.delete(existing.getId(), existing.getUserId());
+        appLogger.info(LoggingConstants.EXPENSE_DELETED, Map.of(
+            "expenseId", existing.getId(),
+            "scope", existing.getScope()
+        ));
+    }
+
+    @Transactional
+    public void deleteInstallmentGroup(UUID id) {
+        User currentUser = securityUtils.getCurrentUser();
+        UUID ownerId = repository.findInstallmentGroupUserId(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parcelamento nao encontrado"));
+
+        if (!ownerId.equals(currentUser.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado ao parcelamento informado");
+        }
+
+        repository.deleteExpensesByInstallmentGroup(id, currentUser.getId());
+        repository.deleteInstallmentGroup(id, currentUser.getId());
+        appLogger.info(LoggingConstants.EXPENSE_DELETED, Map.of("installmentGroupId", id));
+    }
+
     @Transactional
     public List<ExpenseResponse> createInstallments(ExpenseInstallmentCreateRequest request) {
         validateInstallment(request);
 
         User currentUser = securityUtils.getCurrentUser();
-        if (request.familyMemberId() != null
-            && !repository.familyMemberBelongsToUser(request.familyMemberId(), currentUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membro nao pertence ao usuario");
-        }
-
-        if (request.categoryId() != null && !repository.categoryIsAccessible(request.categoryId(), currentUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Categoria nao acessivel ao usuario");
-        }
+        validateReferences(request.familyMemberId(), request.categoryId(), currentUser.getId());
 
         String description = request.description().trim();
         UUID groupId = repository.createInstallmentGroup(
@@ -121,6 +166,28 @@ public class ExpenseService {
         ));
 
         return responses;
+    }
+
+    private Expense requireOwnedExpense(UUID id) {
+        Expense expense = repository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gasto nao encontrado"));
+
+        User currentUser = securityUtils.getCurrentUser();
+        if (!expense.getUserId().equals(currentUser.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado ao gasto informado");
+        }
+
+        return expense;
+    }
+
+    private void validateReferences(UUID familyMemberId, UUID categoryId, UUID userId) {
+        if (familyMemberId != null && !repository.familyMemberBelongsToUser(familyMemberId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membro nao pertence ao usuario");
+        }
+
+        if (categoryId != null && !repository.categoryIsAccessible(categoryId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Categoria nao acessivel ao usuario");
+        }
     }
 
     private void validate(ExpenseCreateRequest request) {

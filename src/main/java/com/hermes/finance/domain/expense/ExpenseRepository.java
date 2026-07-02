@@ -1,11 +1,13 @@
 package com.hermes.finance.domain.expense;
 
 import com.hermes.finance.util.NativeQueryCatalog;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -21,6 +23,16 @@ public class ExpenseRepository implements ExpenseRepositoryPort {
         this.jdbcTemplate = jdbcTemplate;
         this.nativeQueryCatalog = nativeQueryCatalog;
         this.rowMapper = rowMapper;
+    }
+
+    @Override
+    public Optional<Expense> findById(UUID id) {
+        String sql = nativeQueryCatalog.get("expense.findById");
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(sql, new MapSqlParameterSource("id", id), rowMapper));
+        } catch (EmptyResultDataAccessException ex) {
+            return Optional.empty();
+        }
     }
 
     @Override
@@ -56,6 +68,28 @@ public class ExpenseRepository implements ExpenseRepositoryPort {
     }
 
     @Override
+    public Optional<Expense> update(Expense expense) {
+        String sql = nativeQueryCatalog.get("expense.update");
+        MapSqlParameterSource params = baseParams(expense)
+            .addValue("id", expense.getId())
+            .addValue("updatedAt", OffsetDateTime.now());
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(sql, params, rowMapper));
+        } catch (EmptyResultDataAccessException ex) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public void delete(UUID id, UUID userId) {
+        String sql = nativeQueryCatalog.get("expense.delete");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("userId", userId);
+        jdbcTemplate.update(sql, params);
+    }
+
+    @Override
     public UUID createInstallmentGroup(UUID userId,
                                        String description,
                                        java.math.BigDecimal totalAmount,
@@ -79,6 +113,34 @@ public class ExpenseRepository implements ExpenseRepositoryPort {
     }
 
     @Override
+    public Optional<UUID> findInstallmentGroupUserId(UUID id) {
+        String sql = nativeQueryCatalog.get("installmentGroup.findUserIdById");
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(sql, new MapSqlParameterSource("id", id), UUID.class));
+        } catch (EmptyResultDataAccessException ex) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public void deleteExpensesByInstallmentGroup(UUID id, UUID userId) {
+        String sql = nativeQueryCatalog.get("installmentGroup.deleteExpenses");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("userId", userId);
+        jdbcTemplate.update(sql, params);
+    }
+
+    @Override
+    public void deleteInstallmentGroup(UUID id, UUID userId) {
+        String sql = nativeQueryCatalog.get("installmentGroup.delete");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("userId", userId);
+        jdbcTemplate.update(sql, params);
+    }
+
+    @Override
     public boolean familyMemberBelongsToUser(UUID familyMemberId, UUID userId) {
         String sql = nativeQueryCatalog.get("expense.familyMemberBelongsToUser");
         MapSqlParameterSource params = new MapSqlParameterSource()
@@ -96,5 +158,23 @@ public class ExpenseRepository implements ExpenseRepositoryPort {
             .addValue("userId", userId);
         Integer count = jdbcTemplate.queryForObject(sql, params, Integer.class);
         return count != null && count > 0;
+    }
+
+    private MapSqlParameterSource baseParams(Expense expense) {
+        return new MapSqlParameterSource()
+            .addValue("userId", expense.getUserId())
+            .addValue("familyMemberId", expense.getFamilyMemberId())
+            .addValue("categoryId", expense.getCategoryId())
+            .addValue("installmentGroupId", expense.getInstallmentGroupId())
+            .addValue("description", expense.getDescription())
+            .addValue("amount", expense.getAmount())
+            .addValue("expenseDate", expense.getExpenseDate())
+            .addValue("installmentNumber", expense.getInstallmentNumber())
+            .addValue("totalInstallments", expense.getTotalInstallments())
+            .addValue("isRecurring", expense.isRecurring())
+            .addValue("isFixed", expense.isFixed())
+            .addValue("paymentMethod", expense.getPaymentMethod())
+            .addValue("notes", expense.getNotes())
+            .addValue("scope", expense.getScope());
     }
 }
