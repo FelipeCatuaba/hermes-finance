@@ -51,6 +51,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleStatus(ResponseStatusException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        if (status == HttpStatus.FORBIDDEN) {
+            appLogger.warn(LoggingConstants.FORBIDDEN_ACCESS_ATTEMPT, Map.of(
+                "method", request.getMethod(),
+                "path", request.getRequestURI(),
+                "status", status.value()
+            ));
+        }
         return ResponseEntity.status(status).body(
             new ApiErrorResponse("request_error", ex.getReason(), Instant.now(), request.getRequestURI())
         );
