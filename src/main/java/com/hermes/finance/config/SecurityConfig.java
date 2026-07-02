@@ -1,5 +1,9 @@
 package com.hermes.finance.config;
 
+import com.hermes.finance.logging.AppLogger;
+import com.hermes.finance.logging.LoggingConstants;
+import com.hermes.finance.security.JwtAudienceValidator;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,10 +25,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import com.hermes.finance.security.JwtAudienceValidator;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,12 +44,31 @@ public class SecurityConfig {
     private String allowedAudiences;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AppLogger appLogger) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    appLogger.warn(LoggingConstants.INVALID_TOKEN, Map.of(
+                        "method", request.getMethod(),
+                        "path", request.getRequestURI(),
+                        "status", HttpServletResponse.SC_UNAUTHORIZED,
+                        "reason", authException.getClass().getSimpleName()
+                    ));
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    appLogger.warn(LoggingConstants.FORBIDDEN_ACCESS_ATTEMPT, Map.of(
+                        "method", request.getMethod(),
+                        "path", request.getRequestURI(),
+                        "status", HttpServletResponse.SC_FORBIDDEN,
+                        "reason", accessDeniedException.getClass().getSimpleName()
+                    ));
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                 .requestMatchers("/api/webhooks/**").permitAll()
@@ -76,7 +99,7 @@ public class SecurityConfig {
             .toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
-        configuration.setExposedHeaders(List.of("Cache-Control", "Content-Type"));
+        configuration.setExposedHeaders(List.of("Cache-Control", "Content-Type", "X-Request-Id"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

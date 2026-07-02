@@ -31,6 +31,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
         String requestId = "req-" + UUID.randomUUID().toString().substring(0, 8);
         MDC.put("requestId", requestId);
         MDC.put("userId", authIdentityProvider.getUserIdOrAnonymous());
+        response.setHeader("X-Request-Id", requestId);
 
         try {
             filterChain.doFilter(request, response);

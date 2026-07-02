@@ -2,6 +2,7 @@ package com.hermes.finance.exception;
 
 import com.hermes.finance.dto.response.ApiErrorResponse;
 import com.hermes.finance.logging.AppLogger;
+import com.hermes.finance.logging.LoggingConstants;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
@@ -103,5 +104,21 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response.getBody());
         assertEquals("request_error", response.getBody().error());
         assertEquals("Credenciais invalidas", response.getBody().message());
+    }
+
+    @Test
+    void shouldLogForbiddenAccessAttempt() {
+        when(request.getMethod()).thenReturn("DELETE");
+        when(request.getRequestURI()).thenReturn("/api/expenses/123");
+        ResponseStatusException ex = new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado");
+
+        ResponseEntity<ApiErrorResponse> response = globalExceptionHandler.handleStatus(ex, request);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(appLogger).warn(eq(LoggingConstants.FORBIDDEN_ACCESS_ATTEMPT), eq(java.util.Map.of(
+            "method", "DELETE",
+            "path", "/api/expenses/123",
+            "status", 403
+        )));
     }
 }

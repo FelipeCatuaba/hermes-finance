@@ -19,12 +19,18 @@ class LoggingConstantsTest {
             () -> LoggingConstants.EXPENSE_CREATED,
             () -> LoggingConstants.EXPENSE_UPDATED,
             () -> LoggingConstants.EXPENSE_DELETED,
+            () -> LoggingConstants.EXPENSE_BULK_IMPORTED,
             () -> LoggingConstants.INSTALLMENT_GROUP_CREATED,
             () -> LoggingConstants.INCOME_CREATED,
             () -> LoggingConstants.INCOME_UPDATED,
             () -> LoggingConstants.INCOME_DELETED,
+            () -> LoggingConstants.BUDGET_UPDATED,
+            () -> LoggingConstants.BUDGET_DELETED,
+            () -> LoggingConstants.FAMILY_MEMBER_CREATED,
+            () -> LoggingConstants.FAMILY_MEMBER_UPDATED,
+            () -> LoggingConstants.FAMILY_MEMBER_DEACTIVATED,
             () -> LoggingConstants.UNHANDLED_EXCEPTION
-        }; // 13 constantes
+        };
 
         assertEquals("USER_REGISTERED", constants[0].get());
         assertEquals("USER_UPDATED", constants[1].get());
@@ -34,10 +40,16 @@ class LoggingConstantsTest {
         assertEquals("EXPENSE_CREATED", constants[5].get());
         assertEquals("EXPENSE_UPDATED", constants[6].get());
         assertEquals("EXPENSE_DELETED", constants[7].get());
-        assertEquals("INSTALLMENT_GROUP_CREATED", constants[8].get());
-        assertEquals("INCOME_CREATED", constants[9].get());
-        assertEquals("INCOME_UPDATED", constants[10].get());
-        assertEquals("INCOME_DELETED", constants[11].get());
-        assertEquals("UNHANDLED_EXCEPTION", constants[12].get());
+        assertEquals("EXPENSE_BULK_IMPORTED", constants[8].get());
+        assertEquals("INSTALLMENT_GROUP_CREATED", constants[9].get());
+        assertEquals("INCOME_CREATED", constants[10].get());
+        assertEquals("INCOME_UPDATED", constants[11].get());
+        assertEquals("INCOME_DELETED", constants[12].get());
+        assertEquals("BUDGET_UPDATED", constants[13].get());
+        assertEquals("BUDGET_DELETED", constants[14].get());
+        assertEquals("FAMILY_MEMBER_CREATED", constants[15].get());
+        assertEquals("FAMILY_MEMBER_UPDATED", constants[16].get());
+        assertEquals("FAMILY_MEMBER_DEACTIVATED", constants[17].get());
+        assertEquals("UNHANDLED_EXCEPTION", constants[18].get());
     }
 }

@@ -158,6 +158,10 @@ class ExpenseServiceTest {
         verify(repository).save(expenseCaptor.capture());
         assertEquals(USER_ID, expenseCaptor.getValue().getUserId());
         assertEquals("owner", expenseCaptor.getValue().getScope());
+        verify(appLogger).info(eq(LoggingConstants.EXPENSE_BULK_IMPORTED), eq(Map.of(
+            "bulkCreated", 1,
+            "bulkFailed", 1
+        )));
     }
 
     @Test

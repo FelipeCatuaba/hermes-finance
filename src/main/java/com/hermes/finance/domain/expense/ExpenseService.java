@@ -147,7 +147,7 @@ public class ExpenseService {
             created.add(toResponse(saved));
         }
 
-        appLogger.info(LoggingConstants.EXPENSE_CREATED, Map.of(
+        appLogger.info(LoggingConstants.EXPENSE_BULK_IMPORTED, Map.of(
             "bulkCreated", created.size(),
             "bulkFailed", failedCount
         ));

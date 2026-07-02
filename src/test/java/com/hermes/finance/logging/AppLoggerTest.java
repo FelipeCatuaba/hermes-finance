@@ -2,70 +2,73 @@ package com.hermes.finance.logging;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.Logger;
 
-import java.util.HashMap;
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith(MockitoExtension.class)
 class AppLoggerTest {
 
-    @InjectMocks
     private AppLogger appLogger;
-
-    private Map<String, Object> context;
 
     @BeforeEach
     void setUp() {
-        context = new HashMap<>();
-        context.put("userId", 123);
-        context.put("action", "login");
+        appLogger = new AppLogger();
     }
 
     @Test
-    void testInfoLogging() {
-        appLogger.info("USER_LOGIN", context);
-        // Method executes without throwing exception
+    void shouldLogSafeContext() {
+        String message = appLogger.buildMessage("EXPENSE_CREATED", Map.of(
+            "expenseId", "exp-1",
+            "scope", "owner"
+        ));
+
+        assertTrue(message.contains("event=EXPENSE_CREATED"));
+        assertTrue(message.contains("expenseId=exp-1"));
+        assertTrue(message.contains("scope=owner"));
     }
 
     @Test
-    void testWarnLogging() {
-        appLogger.warn("INVALID_ATTEMPT", context);
-        // Method executes without throwing exception
+    void shouldDropSensitiveFieldsFromLogMessage() {
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("expenseId", "exp-1");
+        context.put("email", "user@example.com");
+        context.put("fullName", "Maria");
+        context.put("password", "secret");
+        context.put("accessToken", "token-value");
+        context.put("amount", BigDecimal.TEN);
+        context.put("description", "Farmacia");
+        context.put("notes", "private note");
+        context.put("familyMemberName", "Ana");
+
+        String message = appLogger.buildMessage("SANITIZED_EVENT", context);
+
+        assertTrue(message.contains("expenseId=exp-1"));
+        assertFalse(message.contains("user@example.com"));
+        assertFalse(message.contains("Maria"));
+        assertFalse(message.contains("secret"));
+        assertFalse(message.contains("token-value"));
+        assertFalse(message.contains("10"));
+        assertFalse(message.contains("Farmacia"));
+        assertFalse(message.contains("private note"));
+        assertFalse(message.contains("Ana"));
     }
 
     @Test
-    void testErrorLoggingWithException() {
-        Exception ex = new RuntimeException("Test error");
-        appLogger.error("OPERATION_FAILED", context, ex);
-        // Method executes without throwing exception
+    void shouldAcceptNullContext() {
+        assertTrue(appLogger.buildMessage("EMPTY_EVENT", null).contains("event=EMPTY_EVENT"));
     }
 
     @Test
-    void testErrorLoggingWithoutException() {
-        appLogger.error("OPERATION_FAILED", context, null);
-        // Method executes without throwing exception
-    }
-
-    @Test
-    void testBuildMessageWithMultipleContextEntries() {
-        context.put("timestamp", "2024-01-01");
-        context.put("duration", 150);
-        appLogger.info("PERFORMANCE_LOG", context);
-        // Method executes without throwing exception
-    }
-
-    @Test
-    void testBuildMessageWithEmptyContext() {
-        Map<String, Object> emptyContext = new HashMap<>();
-        appLogger.info("EMPTY_CONTEXT_EVENT", emptyContext);
-        // Method executes without throwing exception
+    void shouldNotMutateImmutableContextWhenLoggingError() {
+        assertDoesNotThrow(() -> appLogger.error(
+            "OPERATION_FAILED",
+            Map.of("path", "/api/process"),
+            new RuntimeException("Sensitive message")
+        ));
     }
 }

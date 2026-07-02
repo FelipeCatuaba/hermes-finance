@@ -24,6 +24,7 @@ class SecurityConfigTest {
         assertEquals(List.of("http://localhost:4200", "https://app.hermes.com"), cors.getAllowedOrigins());
         assertTrue(cors.getAllowedMethods().contains("POST"));
         assertTrue(cors.getAllowedHeaders().contains("Authorization"));
+        assertTrue(cors.getExposedHeaders().contains("X-Request-Id"));
         assertTrue(cors.getAllowCredentials());
     }
 
