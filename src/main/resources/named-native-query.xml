@@ -285,6 +285,40 @@
           AND user_id = :userId
     ]]></query>
 
+    <query name="installmentReport.openItems"><![CDATA[
+        SELECT ig.id AS group_id,
+               ig.description,
+               ig.total_amount,
+               ig.total_installments,
+               e.id AS installment_id,
+               e.installment_number,
+               e.amount,
+               e.expense_date AS due_date,
+               future_summary.next_due_date,
+               future_summary.future_total,
+               future_summary.future_installments_count
+        FROM installment_groups ig
+        INNER JOIN (
+            SELECT installment_group_id,
+                   MIN(expense_date) AS next_due_date,
+                   COALESCE(SUM(amount), 0) AS future_total,
+                   COUNT(1) AS future_installments_count
+            FROM expenses
+            WHERE user_id = :userId
+              AND installment_group_id IS NOT NULL
+              AND expense_date >= :today
+            GROUP BY installment_group_id
+        ) future_summary ON future_summary.installment_group_id = ig.id
+        INNER JOIN expenses e ON e.installment_group_id = ig.id
+            AND e.user_id = ig.user_id
+            AND e.expense_date >= :today
+        WHERE ig.user_id = :userId
+        ORDER BY future_summary.next_due_date ASC,
+                 ig.description ASC,
+                 e.expense_date ASC,
+                 e.installment_number ASC
+    ]]></query>
+
     <query name="expense.familyMemberBelongsToUser"><![CDATA[
         SELECT COUNT(1)
         FROM family_members
