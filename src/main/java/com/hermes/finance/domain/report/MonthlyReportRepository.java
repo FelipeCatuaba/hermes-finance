@@ -56,10 +56,30 @@ public class MonthlyReportRepository implements MonthlyReportRepositoryPort {
         return queryTotal("monthlyReport.familyExpensesTotal", userId, startDate, endDate);
     }
 
+    @Override
+    public List<YearlyReportAmount> sumIncomeByMonth(UUID userId, LocalDate startDate, LocalDate endDate) {
+        return queryYearlyAmounts("yearlyReport.incomeByMonth", userId, startDate, endDate);
+    }
+
+    @Override
+    public List<YearlyReportAmount> sumOwnerExpensesByMonth(UUID userId, LocalDate startDate, LocalDate endDate) {
+        return queryYearlyAmounts("yearlyReport.ownerExpensesByMonth", userId, startDate, endDate);
+    }
+
+    @Override
+    public List<YearlyReportAmount> sumFamilyExpensesByMonth(UUID userId, LocalDate startDate, LocalDate endDate) {
+        return queryYearlyAmounts("yearlyReport.familyExpensesByMonth", userId, startDate, endDate);
+    }
+
     private BigDecimal queryTotal(String queryName, UUID userId, LocalDate startDate, LocalDate endDate) {
         String sql = nativeQueryCatalog.get(queryName);
         BigDecimal total = jdbcTemplate.queryForObject(sql, periodParams(userId, startDate, endDate), BigDecimal.class);
         return total == null ? BigDecimal.ZERO : total;
+    }
+
+    private List<YearlyReportAmount> queryYearlyAmounts(String queryName, UUID userId, LocalDate startDate, LocalDate endDate) {
+        String sql = nativeQueryCatalog.get(queryName);
+        return jdbcTemplate.query(sql, periodParams(userId, startDate, endDate), this::mapYearlyAmount);
     }
 
     private MapSqlParameterSource periodParams(UUID userId, LocalDate startDate, LocalDate endDate) {
@@ -97,6 +117,13 @@ public class MonthlyReportRepository implements MonthlyReportRepositoryPort {
             rs.getObject("family_member_id", UUID.class),
             rs.getString("family_member_name"),
             rs.getString("family_member_relation"),
+            rs.getBigDecimal("total")
+        );
+    }
+
+    private YearlyReportAmount mapYearlyAmount(ResultSet rs, int rowNum) throws SQLException {
+        return new YearlyReportAmount(
+            rs.getInt("month"),
             rs.getBigDecimal("total")
         );
     }

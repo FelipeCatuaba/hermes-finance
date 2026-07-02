@@ -373,6 +373,41 @@
           AND expense_date < :endDate
     ]]></query>
 
+    <query name="yearlyReport.incomeByMonth"><![CDATA[
+        SELECT CAST(EXTRACT(MONTH FROM income_date) AS integer) AS month,
+               COALESCE(SUM(amount), 0) AS total
+        FROM incomes
+        WHERE user_id = :userId
+          AND income_date >= :startDate
+          AND income_date < :endDate
+        GROUP BY 1
+        ORDER BY month ASC
+    ]]></query>
+
+    <query name="yearlyReport.ownerExpensesByMonth"><![CDATA[
+        SELECT CAST(EXTRACT(MONTH FROM expense_date) AS integer) AS month,
+               COALESCE(SUM(amount), 0) AS total
+        FROM expenses
+        WHERE user_id = :userId
+          AND scope = 'owner'
+          AND expense_date >= :startDate
+          AND expense_date < :endDate
+        GROUP BY 1
+        ORDER BY month ASC
+    ]]></query>
+
+    <query name="yearlyReport.familyExpensesByMonth"><![CDATA[
+        SELECT CAST(EXTRACT(MONTH FROM expense_date) AS integer) AS month,
+               COALESCE(SUM(amount), 0) AS total
+        FROM expenses
+        WHERE user_id = :userId
+          AND scope = 'family'
+          AND expense_date >= :startDate
+          AND expense_date < :endDate
+        GROUP BY 1
+        ORDER BY month ASC
+    ]]></query>
+
     <query name="income.findByUserAndPeriod"><![CDATA[
         SELECT id,
                user_id,
