@@ -2,6 +2,7 @@ package com.hermes.finance.domain.expense;
 
 import com.hermes.finance.dto.request.ExpenseCreateRequest;
 import com.hermes.finance.dto.request.ExpenseInstallmentCreateRequest;
+import com.hermes.finance.dto.response.ExpenseBulkCreateResponse;
 import com.hermes.finance.dto.response.ExpenseListResponse;
 import com.hermes.finance.dto.response.ExpenseResponse;
 import jakarta.validation.Valid;
@@ -44,6 +45,12 @@ public class ExpenseController {
     @ResponseStatus(HttpStatus.CREATED)
     public ExpenseResponse create(@Valid @RequestBody ExpenseCreateRequest request) {
         return service.create(request);
+    }
+
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ExpenseBulkCreateResponse bulkCreate(@RequestBody List<ExpenseCreateRequest> requests) {
+        return service.bulkCreate(requests);
     }
 
     @PostMapping("/installments")
