@@ -15,4 +15,5 @@ public interface MonthlyReportRepositoryPort {
     List<YearlyReportAmount> sumIncomeByMonth(UUID userId, LocalDate startDate, LocalDate endDate);
     List<YearlyReportAmount> sumOwnerExpensesByMonth(UUID userId, LocalDate startDate, LocalDate endDate);
     List<YearlyReportAmount> sumFamilyExpensesByMonth(UUID userId, LocalDate startDate, LocalDate endDate);
+    List<OpenInstallmentReportItem> findOpenInstallmentItems(UUID userId, LocalDate today);
 }

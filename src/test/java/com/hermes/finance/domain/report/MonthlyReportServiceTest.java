@@ -2,6 +2,7 @@ package com.hermes.finance.domain.report;
 
 import com.hermes.finance.domain.user.User;
 import com.hermes.finance.dto.response.MonthlyReportResponse;
+import com.hermes.finance.dto.response.OpenInstallmentsReportResponse;
 import com.hermes.finance.dto.response.YearlyReportResponse;
 import com.hermes.finance.util.SecurityUtils;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,10 @@ class MonthlyReportServiceTest {
     private static final UUID INCOME_ID = UUID.fromString("d6843534-1864-44e3-a9e6-1f8b6d741f5e");
     private static final UUID CATEGORY_ID = UUID.fromString("2c34ed5d-8d9f-4e7f-87e3-a34be90d60cb");
     private static final UUID MEMBER_ID = UUID.fromString("8bd15f7b-6cf3-4a95-8bc7-d244807e4620");
+    private static final UUID GROUP_ID = UUID.fromString("6fcd1116-0357-4ba3-9617-ac65d32a054b");
+    private static final UUID SECOND_GROUP_ID = UUID.fromString("5c8a530e-76da-4092-bf4d-c5e6a5d15293");
+    private static final UUID INSTALLMENT_ID = UUID.fromString("34ca51c7-840f-4b14-b9fd-9ed78f44e9a9");
+    private static final UUID SECOND_INSTALLMENT_ID = UUID.fromString("d6be30e1-06b5-4267-8ce4-1938f0f66f3c");
 
     @Mock
     private MonthlyReportRepositoryPort repository;
@@ -173,6 +178,64 @@ class MonthlyReportServiceTest {
         ResponseStatusException invalidYear = assertThrows(ResponseStatusException.class, () -> service.getYearlyReport(1899));
 
         assertEquals(HttpStatus.BAD_REQUEST, invalidYear.getStatusCode());
+    }
+
+    @Test
+    void shouldBuildOpenInstallmentsReportOrderedByNextDueDate() {
+        LocalDate today = LocalDate.now();
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findOpenInstallmentItems(USER_ID, today)).thenReturn(List.of(
+            new OpenInstallmentReportItem(
+                SECOND_GROUP_ID,
+                "Sofa",
+                new BigDecimal("600.00"),
+                6,
+                SECOND_INSTALLMENT_ID,
+                4,
+                new BigDecimal("100.00"),
+                today.plusDays(3),
+                today.plusDays(3),
+                new BigDecimal("300.00"),
+                3
+            ),
+            new OpenInstallmentReportItem(
+                GROUP_ID,
+                "Notebook",
+                new BigDecimal("1200.00"),
+                12,
+                INSTALLMENT_ID,
+                5,
+                new BigDecimal("100.00"),
+                today.plusDays(10),
+                today.plusDays(10),
+                new BigDecimal("800.00"),
+                8
+            )
+        ));
+
+        OpenInstallmentsReportResponse response = service.getOpenInstallmentsReport();
+
+        assertEquals(new BigDecimal("1100.00"), response.totalCommitted());
+        assertEquals(2, response.groups().size());
+        assertEquals(SECOND_GROUP_ID, response.groups().get(0).id());
+        assertEquals("Sofa", response.groups().get(0).description());
+        assertEquals(3, response.groups().get(0).paidInstallments());
+        assertEquals(new BigDecimal("300.00"), response.groups().get(0).futureTotal());
+        assertEquals(SECOND_INSTALLMENT_ID, response.groups().get(0).futureInstallments().get(0).id());
+        assertEquals(GROUP_ID, response.groups().get(1).id());
+    }
+
+    @Test
+    void shouldLoadOpenInstallmentsOnlyForAuthenticatedUser() {
+        LocalDate today = LocalDate.now();
+        when(securityUtils.getCurrentUser()).thenReturn(user());
+        when(repository.findOpenInstallmentItems(USER_ID, today)).thenReturn(List.of());
+
+        OpenInstallmentsReportResponse response = service.getOpenInstallmentsReport();
+
+        assertEquals(BigDecimal.ZERO, response.totalCommitted());
+        assertEquals(List.of(), response.groups());
+        verify(repository).findOpenInstallmentItems(USER_ID, today);
     }
 
     private User user() {

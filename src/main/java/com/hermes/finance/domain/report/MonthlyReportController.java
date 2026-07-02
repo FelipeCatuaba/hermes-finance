@@ -1,6 +1,7 @@
 package com.hermes.finance.domain.report;
 
 import com.hermes.finance.dto.response.MonthlyReportResponse;
+import com.hermes.finance.dto.response.OpenInstallmentsReportResponse;
 import com.hermes.finance.dto.response.YearlyReportResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,5 +26,10 @@ public class MonthlyReportController {
     @GetMapping("/yearly")
     public YearlyReportResponse yearly(@RequestParam int year) {
         return service.getYearlyReport(year);
+    }
+
+    @GetMapping("/installments")
+    public OpenInstallmentsReportResponse installments() {
+        return service.getOpenInstallmentsReport();
     }
 }

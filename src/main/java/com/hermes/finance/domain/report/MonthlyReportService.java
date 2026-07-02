@@ -4,6 +4,7 @@ import com.hermes.finance.domain.user.User;
 import com.hermes.finance.dto.response.ExpenseCategorySummaryResponse;
 import com.hermes.finance.dto.response.ExpenseFamilyMemberSummaryResponse;
 import com.hermes.finance.dto.response.MonthlyReportResponse;
+import com.hermes.finance.dto.response.OpenInstallmentsReportResponse;
 import com.hermes.finance.dto.response.YearlyReportResponse;
 import com.hermes.finance.util.SecurityUtils;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -95,6 +97,23 @@ public class MonthlyReportService {
         return new YearlyReportResponse(year, months);
     }
 
+    public OpenInstallmentsReportResponse getOpenInstallmentsReport() {
+        User currentUser = securityUtils.getCurrentUser();
+        List<OpenInstallmentReportItem> items = repository.findOpenInstallmentItems(currentUser.getId(), LocalDate.now());
+
+        Map<java.util.UUID, List<OpenInstallmentReportItem>> itemsByGroup = items.stream()
+            .collect(Collectors.groupingBy(OpenInstallmentReportItem::groupId, LinkedHashMap::new, Collectors.toList()));
+
+        List<OpenInstallmentsReportResponse.Group> groups = itemsByGroup.values().stream()
+            .map(this::toOpenInstallmentGroup)
+            .toList();
+        BigDecimal totalCommitted = groups.stream()
+            .map(OpenInstallmentsReportResponse.Group::futureTotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new OpenInstallmentsReportResponse(totalCommitted, groups);
+    }
+
     private YearMonth validatePeriod(int month, int year) {
         if (month < 1 || month > 12) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mes invalido");
@@ -151,6 +170,30 @@ public class MonthlyReportService {
             item -> item.total() == null ? BigDecimal.ZERO : item.total(),
             BigDecimal::add
         ));
+    }
+
+    private OpenInstallmentsReportResponse.Group toOpenInstallmentGroup(List<OpenInstallmentReportItem> items) {
+        OpenInstallmentReportItem first = items.get(0);
+        List<OpenInstallmentsReportResponse.FutureInstallment> futureInstallments = items.stream()
+            .map(item -> new OpenInstallmentsReportResponse.FutureInstallment(
+                item.installmentId(),
+                item.installmentNumber(),
+                item.amount(),
+                item.dueDate()
+            ))
+            .toList();
+        int paidInstallments = Math.max(0, first.totalInstallments() - first.futureInstallmentsCount());
+
+        return new OpenInstallmentsReportResponse.Group(
+            first.groupId(),
+            first.description(),
+            first.totalAmount(),
+            paidInstallments,
+            first.totalInstallments(),
+            first.nextDueDate(),
+            first.futureTotal(),
+            futureInstallments
+        );
     }
 
     private BigDecimal percentage(BigDecimal amount, BigDecimal base) {

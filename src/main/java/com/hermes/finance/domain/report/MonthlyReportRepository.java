@@ -71,6 +71,14 @@ public class MonthlyReportRepository implements MonthlyReportRepositoryPort {
         return queryYearlyAmounts("yearlyReport.familyExpensesByMonth", userId, startDate, endDate);
     }
 
+    @Override
+    public List<OpenInstallmentReportItem> findOpenInstallmentItems(UUID userId, LocalDate today) {
+        String sql = nativeQueryCatalog.get("installmentReport.openItems");
+        return jdbcTemplate.query(sql, new MapSqlParameterSource()
+            .addValue("userId", userId)
+            .addValue("today", today), this::mapOpenInstallmentItem);
+    }
+
     private BigDecimal queryTotal(String queryName, UUID userId, LocalDate startDate, LocalDate endDate) {
         String sql = nativeQueryCatalog.get(queryName);
         BigDecimal total = jdbcTemplate.queryForObject(sql, periodParams(userId, startDate, endDate), BigDecimal.class);
@@ -125,6 +133,22 @@ public class MonthlyReportRepository implements MonthlyReportRepositoryPort {
         return new YearlyReportAmount(
             rs.getInt("month"),
             rs.getBigDecimal("total")
+        );
+    }
+
+    private OpenInstallmentReportItem mapOpenInstallmentItem(ResultSet rs, int rowNum) throws SQLException {
+        return new OpenInstallmentReportItem(
+            rs.getObject("group_id", UUID.class),
+            rs.getString("description"),
+            rs.getBigDecimal("total_amount"),
+            rs.getInt("total_installments"),
+            rs.getObject("installment_id", UUID.class),
+            rs.getInt("installment_number"),
+            rs.getBigDecimal("amount"),
+            rs.getObject("due_date", LocalDate.class),
+            rs.getObject("next_due_date", LocalDate.class),
+            rs.getBigDecimal("future_total"),
+            rs.getInt("future_installments_count")
         );
     }
 }
