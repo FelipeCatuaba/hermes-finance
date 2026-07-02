@@ -128,4 +128,111 @@
         WHERE id = :categoryId
           AND (is_default = true OR user_id = :userId)
     ]]></query>
+
+    <query name="income.findByUserAndPeriod"><![CDATA[
+        SELECT id,
+               user_id,
+               category_id,
+               description,
+               amount,
+               income_date,
+               is_recurring,
+               notes,
+               created_at,
+               updated_at
+        FROM incomes
+        WHERE user_id = :userId
+          AND income_date >= :startDate
+          AND income_date < :endDate
+        ORDER BY income_date DESC, created_at DESC
+    ]]></query>
+
+    <query name="income.findById"><![CDATA[
+        SELECT id,
+               user_id,
+               category_id,
+               description,
+               amount,
+               income_date,
+               is_recurring,
+               notes,
+               created_at,
+               updated_at
+        FROM incomes
+        WHERE id = :id
+        LIMIT 1
+    ]]></query>
+
+    <query name="income.insert"><![CDATA[
+        INSERT INTO incomes (
+            id,
+            user_id,
+            category_id,
+            description,
+            amount,
+            income_date,
+            is_recurring,
+            notes,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            :id,
+            :userId,
+            :categoryId,
+            :description,
+            :amount,
+            :incomeDate,
+            :isRecurring,
+            :notes,
+            :createdAt,
+            :updatedAt
+        )
+        RETURNING id,
+                  user_id,
+                  category_id,
+                  description,
+                  amount,
+                  income_date,
+                  is_recurring,
+                  notes,
+                  created_at,
+                  updated_at
+    ]]></query>
+
+    <query name="income.update"><![CDATA[
+        UPDATE incomes
+        SET category_id = :categoryId,
+            description = :description,
+            amount = :amount,
+            income_date = :incomeDate,
+            is_recurring = :isRecurring,
+            notes = :notes,
+            updated_at = :updatedAt
+        WHERE id = :id
+          AND user_id = :userId
+        RETURNING id,
+                  user_id,
+                  category_id,
+                  description,
+                  amount,
+                  income_date,
+                  is_recurring,
+                  notes,
+                  created_at,
+                  updated_at
+    ]]></query>
+
+    <query name="income.delete"><![CDATA[
+        DELETE FROM incomes
+        WHERE id = :id
+          AND user_id = :userId
+    ]]></query>
+
+    <query name="income.categoryIsAccessible"><![CDATA[
+        SELECT COUNT(1)
+        FROM expense_categories
+        WHERE id = :categoryId
+          AND (is_default = true OR user_id = :userId)
+    ]]></query>
 </queries>
