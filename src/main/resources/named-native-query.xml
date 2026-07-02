@@ -299,6 +299,80 @@
           AND (is_default = true OR user_id = :userId)
     ]]></query>
 
+    <query name="monthlyReport.incomeItems"><![CDATA[
+        SELECT i.id,
+               i.description,
+               i.amount,
+               i.income_date,
+               i.category_id,
+               i.is_recurring,
+               c.name AS category_name,
+               c.icon AS category_icon
+        FROM incomes i
+        LEFT JOIN expense_categories c ON c.id = i.category_id
+        WHERE i.user_id = :userId
+          AND i.income_date >= :startDate
+          AND i.income_date < :endDate
+        ORDER BY i.income_date DESC, i.created_at DESC
+    ]]></query>
+
+    <query name="monthlyReport.incomeTotal"><![CDATA[
+        SELECT COALESCE(SUM(amount), 0)
+        FROM incomes
+        WHERE user_id = :userId
+          AND income_date >= :startDate
+          AND income_date < :endDate
+    ]]></query>
+
+    <query name="monthlyReport.ownerExpensesByCategory"><![CDATA[
+        SELECT e.category_id,
+               COALESCE(c.name, 'Sem categoria') AS category_name,
+               c.icon AS category_icon,
+               c.color_hex AS category_color_hex,
+               COALESCE(SUM(e.amount), 0) AS total
+        FROM expenses e
+        LEFT JOIN expense_categories c ON c.id = e.category_id
+        WHERE e.user_id = :userId
+          AND e.scope = 'owner'
+          AND e.expense_date >= :startDate
+          AND e.expense_date < :endDate
+        GROUP BY e.category_id, c.name, c.icon, c.color_hex
+        ORDER BY total DESC, category_name ASC
+    ]]></query>
+
+    <query name="monthlyReport.ownerExpensesTotal"><![CDATA[
+        SELECT COALESCE(SUM(amount), 0)
+        FROM expenses
+        WHERE user_id = :userId
+          AND scope = 'owner'
+          AND expense_date >= :startDate
+          AND expense_date < :endDate
+    ]]></query>
+
+    <query name="monthlyReport.familyExpensesByMember"><![CDATA[
+        SELECT e.family_member_id,
+               COALESCE(fm.name, 'Familia') AS family_member_name,
+               fm.relation AS family_member_relation,
+               COALESCE(SUM(e.amount), 0) AS total
+        FROM expenses e
+        LEFT JOIN family_members fm ON fm.id = e.family_member_id
+        WHERE e.user_id = :userId
+          AND e.scope = 'family'
+          AND e.expense_date >= :startDate
+          AND e.expense_date < :endDate
+        GROUP BY e.family_member_id, fm.name, fm.relation
+        ORDER BY total DESC, family_member_name ASC
+    ]]></query>
+
+    <query name="monthlyReport.familyExpensesTotal"><![CDATA[
+        SELECT COALESCE(SUM(amount), 0)
+        FROM expenses
+        WHERE user_id = :userId
+          AND scope = 'family'
+          AND expense_date >= :startDate
+          AND expense_date < :endDate
+    ]]></query>
+
     <query name="income.findByUserAndPeriod"><![CDATA[
         SELECT id,
                user_id,
