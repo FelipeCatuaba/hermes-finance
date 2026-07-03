@@ -36,6 +36,8 @@ class HealthControllerTest {
     void actuatorHealthShouldBeExposed() throws Exception {
         mockMvc.perform(get("/actuator/health"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("UP"));
+            .andExpect(jsonPath("$.status").value("UP"))
+            .andExpect(jsonPath("$.components").doesNotExist())
+            .andExpect(jsonPath("$.details").doesNotExist());
     }
 }

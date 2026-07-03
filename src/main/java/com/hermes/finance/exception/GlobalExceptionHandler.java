@@ -51,6 +51,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleStatus(ResponseStatusException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        if (status.is5xxServerError()) {
+            appLogger.error(LoggingConstants.UNHANDLED_EXCEPTION,
+                Map.of("path", request.getRequestURI(), "status", status.value()), ex);
+
+            return ResponseEntity.status(status).body(
+                new ApiErrorResponse("internal_error", "Erro interno", Instant.now(), request.getRequestURI())
+            );
+        }
+
         if (status == HttpStatus.FORBIDDEN) {
             appLogger.warn(LoggingConstants.FORBIDDEN_ACCESS_ATTEMPT, Map.of(
                 "method", request.getMethod(),

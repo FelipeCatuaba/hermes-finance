@@ -107,6 +107,20 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void shouldReturnGenericErrorForResponseStatusServerErrors() {
+        when(request.getRequestURI()).thenReturn("/api/process");
+        ResponseStatusException ex = new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Database password leaked");
+
+        ResponseEntity<ApiErrorResponse> response = globalExceptionHandler.handleStatus(ex, request);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("internal_error", response.getBody().error());
+        assertEquals("Erro interno", response.getBody().message());
+        verify(appLogger).error(eq(LoggingConstants.UNHANDLED_EXCEPTION), anyMap(), eq(ex));
+    }
+
+    @Test
     void shouldLogForbiddenAccessAttempt() {
         when(request.getMethod()).thenReturn("DELETE");
         when(request.getRequestURI()).thenReturn("/api/expenses/123");

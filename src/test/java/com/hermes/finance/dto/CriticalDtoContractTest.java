@@ -3,15 +3,35 @@ package com.hermes.finance.dto;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hermes.finance.dto.request.BudgetUpsertRequest;
+import com.hermes.finance.dto.request.ExpenseInstallmentCreateRequest;
 import com.hermes.finance.dto.request.ExpenseCreateRequest;
+import com.hermes.finance.dto.request.FamilyMemberUpsertRequest;
+import com.hermes.finance.dto.request.ImportExpenseRequest;
+import com.hermes.finance.dto.request.ImportIncomeRequest;
 import com.hermes.finance.dto.request.IncomeUpsertRequest;
+import com.hermes.finance.dto.request.ShareCreateRequest;
+import com.hermes.finance.dto.response.BudgetResponse;
+import com.hermes.finance.dto.response.BudgetStatusResponse;
+import com.hermes.finance.dto.response.ExpenseBulkCreateResponse;
+import com.hermes.finance.dto.response.ExpenseListResponse;
 import com.hermes.finance.dto.response.ExpenseResponse;
+import com.hermes.finance.dto.response.FamilyMemberResponse;
+import com.hermes.finance.dto.response.ImportBatchResponse;
 import com.hermes.finance.dto.response.IncomeResponse;
+import com.hermes.finance.dto.response.MonthlyReportResponse;
+import com.hermes.finance.dto.response.OpenInstallmentsReportResponse;
+import com.hermes.finance.dto.response.PublicShareResponse;
+import com.hermes.finance.dto.response.ShareTokenResponse;
+import com.hermes.finance.dto.response.YearlyReportResponse;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.lang.reflect.RecordComponent;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,6 +42,13 @@ class CriticalDtoContractTest {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
         .findAndRegisterModules()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final Set<String> FORBIDDEN_PUBLIC_DTO_FIELDS = Set.of(
+        "userId",
+        "password",
+        "role",
+        "refreshToken",
+        "accessToken"
+    );
     private static final UUID ID = UUID.fromString("379ab046-4034-4f4a-a455-5868dde8f5bb");
     private static final UUID CATEGORY_ID = UUID.fromString("2c34ed5d-8d9f-4e7f-87e3-a34be90d60cb");
     private static final UUID MEMBER_ID = UUID.fromString("8bd15f7b-6cf3-4a95-8bc7-d244807e4620");
@@ -81,6 +108,55 @@ class CriticalDtoContractTest {
     }
 
     @Test
+    void shouldKeepCriticalRequestDtosFreeOfInternalIdentityAndCredentialFields() {
+        List<Class<?>> requestDtos = List.of(
+            ExpenseCreateRequest.class,
+            ExpenseInstallmentCreateRequest.class,
+            IncomeUpsertRequest.class,
+            BudgetUpsertRequest.class,
+            FamilyMemberUpsertRequest.class,
+            ImportExpenseRequest.class,
+            ImportIncomeRequest.class,
+            ShareCreateRequest.class
+        );
+
+        requestDtos.forEach(this::assertRecordDoesNotDeclareForbiddenFields);
+    }
+
+    @Test
+    void shouldKeepCriticalResponseDtosFreeOfInternalIdentityAndCredentialFields() {
+        List<Class<?>> responseDtos = List.of(
+            ExpenseResponse.class,
+            IncomeResponse.class,
+            BudgetResponse.class,
+            BudgetStatusResponse.class,
+            BudgetStatusResponse.Item.class,
+            FamilyMemberResponse.class,
+            MonthlyReportResponse.class,
+            MonthlyReportResponse.IncomeSection.class,
+            MonthlyReportResponse.IncomeItem.class,
+            MonthlyReportResponse.OwnerExpensesSection.class,
+            MonthlyReportResponse.CategoryBreakdown.class,
+            MonthlyReportResponse.FamilyExpensesSection.class,
+            MonthlyReportResponse.MemberBreakdown.class,
+            MonthlyReportResponse.Summary.class,
+            YearlyReportResponse.class,
+            YearlyReportResponse.MonthSummary.class,
+            OpenInstallmentsReportResponse.class,
+            OpenInstallmentsReportResponse.Group.class,
+            OpenInstallmentsReportResponse.FutureInstallment.class,
+            ShareTokenResponse.class,
+            PublicShareResponse.class,
+            ExpenseListResponse.class,
+            ExpenseBulkCreateResponse.class,
+            ExpenseBulkCreateResponse.ItemError.class,
+            ImportBatchResponse.class
+        );
+
+        responseDtos.forEach(this::assertRecordDoesNotDeclareForbiddenFields);
+    }
+
+    @Test
     void shouldNotSerializeInternalIdentityOrCredentialFieldsInCriticalResponses() throws Exception {
         JsonNode expense = OBJECT_MAPPER.valueToTree(new ExpenseResponse(
             ID,
@@ -121,5 +197,12 @@ class CriticalDtoContractTest {
         assertFalse(node.has("password"));
         assertFalse(node.has("refreshToken"));
         assertFalse(node.has("accessToken"));
+    }
+
+    private void assertRecordDoesNotDeclareForbiddenFields(Class<?> type) {
+        for (RecordComponent component : type.getRecordComponents()) {
+            assertFalse(FORBIDDEN_PUBLIC_DTO_FIELDS.contains(component.getName()),
+                () -> type.getSimpleName() + " exposes forbidden field " + component.getName());
+        }
     }
 }
