@@ -21,6 +21,7 @@ class LoggingConstantsTest {
             () -> LoggingConstants.EXPENSE_DELETED,
             () -> LoggingConstants.EXPENSE_BULK_IMPORTED,
             () -> LoggingConstants.INSTALLMENT_GROUP_CREATED,
+            () -> LoggingConstants.IMPORT_COMPLETED,
             () -> LoggingConstants.INCOME_CREATED,
             () -> LoggingConstants.INCOME_UPDATED,
             () -> LoggingConstants.INCOME_DELETED,
@@ -45,17 +46,18 @@ class LoggingConstantsTest {
         assertEquals("EXPENSE_DELETED", constants[7].get());
         assertEquals("EXPENSE_BULK_IMPORTED", constants[8].get());
         assertEquals("INSTALLMENT_GROUP_CREATED", constants[9].get());
-        assertEquals("INCOME_CREATED", constants[10].get());
-        assertEquals("INCOME_UPDATED", constants[11].get());
-        assertEquals("INCOME_DELETED", constants[12].get());
-        assertEquals("BUDGET_UPDATED", constants[13].get());
-        assertEquals("BUDGET_DELETED", constants[14].get());
-        assertEquals("FAMILY_MEMBER_CREATED", constants[15].get());
-        assertEquals("FAMILY_MEMBER_UPDATED", constants[16].get());
-        assertEquals("FAMILY_MEMBER_DEACTIVATED", constants[17].get());
-        assertEquals("SHARE_LINK_CREATED", constants[18].get());
-        assertEquals("SHARE_LINK_REVOKED", constants[19].get());
-        assertEquals("SHARE_TOKEN_ACCESSED", constants[20].get());
-        assertEquals("UNHANDLED_EXCEPTION", constants[21].get());
+        assertEquals("IMPORT_COMPLETED", constants[10].get());
+        assertEquals("INCOME_CREATED", constants[11].get());
+        assertEquals("INCOME_UPDATED", constants[12].get());
+        assertEquals("INCOME_DELETED", constants[13].get());
+        assertEquals("BUDGET_UPDATED", constants[14].get());
+        assertEquals("BUDGET_DELETED", constants[15].get());
+        assertEquals("FAMILY_MEMBER_CREATED", constants[16].get());
+        assertEquals("FAMILY_MEMBER_UPDATED", constants[17].get());
+        assertEquals("FAMILY_MEMBER_DEACTIVATED", constants[18].get());
+        assertEquals("SHARE_LINK_CREATED", constants[19].get());
+        assertEquals("SHARE_LINK_REVOKED", constants[20].get());
+        assertEquals("SHARE_TOKEN_ACCESSED", constants[21].get());
+        assertEquals("UNHANDLED_EXCEPTION", constants[22].get());
     }
 }

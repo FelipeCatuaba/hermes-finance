@@ -20,6 +20,7 @@ public final class LoggingConstants {
     public static final String EXPENSE_DELETED = "EXPENSE_DELETED";
     public static final String EXPENSE_BULK_IMPORTED = "EXPENSE_BULK_IMPORTED";
     public static final String INSTALLMENT_GROUP_CREATED = "INSTALLMENT_GROUP_CREATED";
+    public static final String IMPORT_COMPLETED = "IMPORT_COMPLETED";
 
     // Receitas
     public static final String INCOME_CREATED = "INCOME_CREATED";
