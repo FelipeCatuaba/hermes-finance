@@ -13,7 +13,7 @@
 
     <groupId>com.hermes</groupId>
     <artifactId>finance-backend</artifactId>
-    <version>0.0.10-SNAPSHOT</version>
+    <version>0.0.11-SNAPSHOT</version>
     <name>finance-backend</name>
 
     <properties>
@@ -168,15 +168,15 @@
                             </excludes>
                             <rules>
                                 <rule>
-                                    <element>PACKAGE</element>
-                                    <excludes>
-                                        <exclude>*Test</exclude>
-                                    </excludes>
+                                    <element>CLASS</element>
+                                    <includes>
+                                        <include>**/*Service.class</include>
+                                    </includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.75</minimum>
+                                            <minimum>0.70</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

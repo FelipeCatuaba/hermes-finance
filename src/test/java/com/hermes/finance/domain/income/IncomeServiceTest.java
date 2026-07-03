@@ -129,6 +129,18 @@ class IncomeServiceTest {
     }
 
     @Test
+    void shouldRejectDeleteForIncomeFromAnotherUserWithForbidden() {
+        when(securityUtils.getCurrentUser()).thenReturn(user(USER_ID));
+        when(repository.findById(INCOME_ID)).thenReturn(Optional.of(persisted(validIncome(OTHER_USER_ID))));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> service.delete(INCOME_ID));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        verify(repository, never()).delete(any(), any());
+    }
+
+    @Test
     void shouldRejectInaccessibleCategory() {
         when(securityUtils.getCurrentUser()).thenReturn(user(USER_ID));
         when(repository.categoryIsAccessible(CATEGORY_ID, USER_ID)).thenReturn(false);
