@@ -29,6 +29,9 @@ class LoggingConstantsTest {
             () -> LoggingConstants.FAMILY_MEMBER_CREATED,
             () -> LoggingConstants.FAMILY_MEMBER_UPDATED,
             () -> LoggingConstants.FAMILY_MEMBER_DEACTIVATED,
+            () -> LoggingConstants.SHARE_LINK_CREATED,
+            () -> LoggingConstants.SHARE_LINK_REVOKED,
+            () -> LoggingConstants.SHARE_TOKEN_ACCESSED,
             () -> LoggingConstants.UNHANDLED_EXCEPTION
         };
 
@@ -50,6 +53,9 @@ class LoggingConstantsTest {
         assertEquals("FAMILY_MEMBER_CREATED", constants[15].get());
         assertEquals("FAMILY_MEMBER_UPDATED", constants[16].get());
         assertEquals("FAMILY_MEMBER_DEACTIVATED", constants[17].get());
-        assertEquals("UNHANDLED_EXCEPTION", constants[18].get());
+        assertEquals("SHARE_LINK_CREATED", constants[18].get());
+        assertEquals("SHARE_LINK_REVOKED", constants[19].get());
+        assertEquals("SHARE_TOKEN_ACCESSED", constants[20].get());
+        assertEquals("UNHANDLED_EXCEPTION", constants[21].get());
     }
 }

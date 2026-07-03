@@ -34,6 +34,9 @@ public final class LoggingConstants {
     public static final String FAMILY_MEMBER_CREATED = "FAMILY_MEMBER_CREATED";
     public static final String FAMILY_MEMBER_UPDATED = "FAMILY_MEMBER_UPDATED";
     public static final String FAMILY_MEMBER_DEACTIVATED = "FAMILY_MEMBER_DEACTIVATED";
+    public static final String SHARE_LINK_CREATED = "SHARE_LINK_CREATED";
+    public static final String SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED";
+    public static final String SHARE_TOKEN_ACCESSED = "SHARE_TOKEN_ACCESSED";
 
     // Sistema
     public static final String UNHANDLED_EXCEPTION = "UNHANDLED_EXCEPTION";

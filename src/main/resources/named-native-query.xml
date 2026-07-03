@@ -684,4 +684,139 @@
         WHERE id = :categoryId
           AND (is_default = true OR user_id = :userId)
     ]]></query>
+    <query name="shareToken.revokeActiveFor"><![CDATA[
+        UPDATE share_tokens
+        SET revoked_at = :revokedAt
+        WHERE user_id = :userId
+          AND family_member_id = :familyMemberId
+          AND month = :month
+          AND year = :year
+          AND revoked_at IS NULL
+    ]]></query>
+
+    <query name="shareToken.insert"><![CDATA[
+        INSERT INTO share_tokens (
+            id,
+            user_id,
+            family_member_id,
+            month,
+            year,
+            token_hash,
+            expires_at,
+            created_at
+        )
+        VALUES (
+            :id,
+            :userId,
+            :familyMemberId,
+            :month,
+            :year,
+            :tokenHash,
+            :expiresAt,
+            :createdAt
+        )
+        RETURNING id,
+                  user_id,
+                  family_member_id,
+                  NULL AS family_member_name,
+                  NULL AS family_member_relation,
+                  month,
+                  year,
+                  token_hash,
+                  expires_at,
+                  revoked_at,
+                  created_at
+    ]]></query>
+
+    <query name="shareToken.findByUserId"><![CDATA[
+        SELECT st.id,
+               st.user_id,
+               st.family_member_id,
+               fm.name AS family_member_name,
+               fm.relation AS family_member_relation,
+               st.month,
+               st.year,
+               st.token_hash,
+               st.expires_at,
+               st.revoked_at,
+               st.created_at
+        FROM share_tokens st
+        INNER JOIN family_members fm ON fm.id = st.family_member_id
+        WHERE st.user_id = :userId
+        ORDER BY st.created_at DESC
+    ]]></query>
+
+    <query name="shareToken.findById"><![CDATA[
+        SELECT st.id,
+               st.user_id,
+               st.family_member_id,
+               fm.name AS family_member_name,
+               fm.relation AS family_member_relation,
+               st.month,
+               st.year,
+               st.token_hash,
+               st.expires_at,
+               st.revoked_at,
+               st.created_at
+        FROM share_tokens st
+        INNER JOIN family_members fm ON fm.id = st.family_member_id
+        WHERE st.id = :id
+        LIMIT 1
+    ]]></query>
+
+    <query name="shareToken.revokeById"><![CDATA[
+        UPDATE share_tokens
+        SET revoked_at = :revokedAt
+        WHERE id = :id
+          AND user_id = :userId
+          AND revoked_at IS NULL
+    ]]></query>
+
+    <query name="shareToken.findValidByHash"><![CDATA[
+        SELECT st.id,
+               st.user_id,
+               st.family_member_id,
+               fm.name AS family_member_name,
+               fm.relation AS family_member_relation,
+               st.month,
+               st.year,
+               st.token_hash,
+               st.expires_at,
+               st.revoked_at,
+               st.created_at
+        FROM share_tokens st
+        INNER JOIN family_members fm ON fm.id = st.family_member_id
+        WHERE st.token_hash = :tokenHash
+          AND st.revoked_at IS NULL
+          AND st.expires_at > :now
+        LIMIT 1
+    ]]></query>
+
+    <query name="shareToken.publicExpenses"><![CDATA[
+        SELECT e.description,
+               e.amount,
+               e.expense_date,
+               e.category_id,
+               c.name AS category_name,
+               c.icon AS category_icon,
+               c.color_hex AS category_color_hex,
+               e.payment_method,
+               e.is_fixed
+        FROM expenses e
+        LEFT JOIN expense_categories c ON c.id = e.category_id
+        WHERE e.user_id = :userId
+          AND e.family_member_id = :familyMemberId
+          AND e.scope = 'family'
+          AND e.expense_date >= :startDate
+          AND e.expense_date < :endDate
+        ORDER BY e.expense_date DESC, e.created_at DESC
+    ]]></query>
+
+    <query name="shareToken.familyMemberBelongsToUser"><![CDATA[
+        SELECT COUNT(1)
+        FROM family_members
+        WHERE id = :familyMemberId
+          AND user_id = :userId
+          AND active = true
+    ]]></query>
 </queries>
