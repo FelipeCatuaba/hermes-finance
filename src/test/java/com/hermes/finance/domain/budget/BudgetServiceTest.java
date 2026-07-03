@@ -124,6 +124,17 @@ class BudgetServiceTest {
         verify(repository, never()).update(any());
     }
 
+    @Test
+    void shouldRejectDeleteForBudgetFromAnotherUser() {
+        when(securityUtils.getCurrentUser()).thenReturn(user(USER_ID));
+        when(repository.findById(BUDGET_ID)).thenReturn(Optional.of(persistedBudget(OTHER_USER_ID)));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.delete(BUDGET_ID));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        verify(repository, never()).delete(any(), any());
+    }
+
     private BudgetUpsertRequest validRequest() {
         return new BudgetUpsertRequest(CATEGORY_ID, 3, 2026, new BigDecimal("500.00"));
     }

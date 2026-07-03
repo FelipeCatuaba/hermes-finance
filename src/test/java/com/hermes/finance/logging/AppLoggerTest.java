@@ -1,7 +1,12 @@
 package com.hermes.finance.logging;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
@@ -9,6 +14,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AppLoggerTest {
@@ -70,5 +76,38 @@ class AppLoggerTest {
             Map.of("path", "/api/process"),
             new RuntimeException("Sensitive message")
         ));
+    }
+
+    @Test
+    void shouldSanitizeSensitiveFieldsBeforeWritingToAppender() {
+        Logger logger = (Logger) LoggerFactory.getLogger(AppLogger.class);
+        Level previousLevel = logger.getLevel();
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        logger.setLevel(Level.INFO);
+
+        try {
+            appLogger.info("EXPENSE_CREATED", Map.of(
+                "expenseId", "exp-1",
+                "email", "user@example.com",
+                "accessToken", "token-value",
+                "amount", BigDecimal.TEN,
+                "description", "Farmacia",
+                "notes", "private note"
+            ));
+        } finally {
+            logger.detachAppender(appender);
+            logger.setLevel(previousLevel);
+        }
+
+        assertEquals(1, appender.list.size());
+        String formattedMessage = appender.list.get(0).getFormattedMessage();
+        assertTrue(formattedMessage.contains("expenseId=exp-1"));
+        assertFalse(formattedMessage.contains("user@example.com"));
+        assertFalse(formattedMessage.contains("token-value"));
+        assertFalse(formattedMessage.contains("10"));
+        assertFalse(formattedMessage.contains("Farmacia"));
+        assertFalse(formattedMessage.contains("private note"));
     }
 }
