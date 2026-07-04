@@ -5,7 +5,7 @@ public final class LoggingConstants {
     private LoggingConstants() {
     }
 
-    // Webhook - sincronizacao de usuarios via Clerk
+    // Usuarios
     public static final String USER_REGISTERED = "USER_REGISTERED";
     public static final String USER_UPDATED = "USER_UPDATED";
     public static final String USER_DELETED = "USER_DELETED";

@@ -20,7 +20,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "external_auth_id", nullable = false, unique = true)
+    @Column(name = "external_auth_id", unique = true)
     private String externalAuthId;
 
     @Column(nullable = false, unique = true)
@@ -28,6 +28,15 @@ public class User {
 
     @Column(nullable = false)
     private String name;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    @Column(nullable = false)
+    private String role = "OWNER";
+
+    @Column(nullable = false)
+    private boolean active = true;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
@@ -58,6 +67,15 @@ public class User {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }

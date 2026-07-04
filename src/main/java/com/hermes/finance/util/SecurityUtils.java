@@ -3,6 +3,8 @@ package com.hermes.finance.util;
 import com.hermes.finance.domain.user.User;
 import com.hermes.finance.domain.user.UserRepositoryPort;
 import com.hermes.finance.security.AuthIdentityProvider;
+import java.util.UUID;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,21 +21,34 @@ public class SecurityUtils {
     }
 
     /**
-     * Retorna o external auth id (claim sub do JWT) do usuario autenticado.
+     * Retorna o id interno (claim sub do JWT) do usuario autenticado.
      */
-    public String getCurrentExternalAuthId() {
+    public String getCurrentUserId() {
         return authIdentityProvider.getRequiredUserId();
     }
 
     /**
-     * Retorna o usuario local correspondente ao id externo do token JWT.
-     * Lanca 404 se o usuario ainda nao foi sincronizado via webhook.
+     * Compatibilidade com chamadas antigas enquanto o corte do provider externo termina.
+     */
+    public String getCurrentExternalAuthId() {
+        return getCurrentUserId();
+    }
+
+    /**
+     * Retorna o usuario local correspondente ao id interno do token JWT.
      */
     public User getCurrentUser() {
-        String externalAuthId = getCurrentExternalAuthId();
-        return userRepository.findByExternalAuthId(externalAuthId)
+        String userId = getCurrentUserId();
+        UUID internalUserId;
+        try {
+            internalUserId = UUID.fromString(userId);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token de autenticacao invalido");
+        }
+        return userRepository.findById(internalUserId)
+            .filter(User::isActive)
             .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Usuario nao sincronizado - aguarde o webhook do provedor de autenticacao"));
+                HttpStatus.UNAUTHORIZED, "Usuario autenticado nao encontrado ou inativo"));
     }
 
     /**

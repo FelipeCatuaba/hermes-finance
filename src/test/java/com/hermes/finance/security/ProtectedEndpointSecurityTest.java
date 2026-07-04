@@ -24,7 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -75,13 +75,13 @@ class ProtectedEndpointSecurityTest {
         when(incomeService.list(3, 2026)).thenReturn(List.of());
         when(budgetService.status(3, 2026)).thenReturn(new BudgetStatusResponse(3, 2026, List.of()));
 
-        mockMvc.perform(get("/api/expenses?month=3&year=2026").with(jwt()))
+        mockMvc.perform(get("/api/expenses?month=3&year=2026").with(user("auth-test-user")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(0));
-        mockMvc.perform(get("/api/incomes?month=3&year=2026").with(jwt()))
+        mockMvc.perform(get("/api/incomes?month=3&year=2026").with(user("auth-test-user")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$").isArray());
-        mockMvc.perform(get("/api/budgets/status?month=3&year=2026").with(jwt()))
+        mockMvc.perform(get("/api/budgets/status?month=3&year=2026").with(user("auth-test-user")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.month").value(3));
 
@@ -111,16 +111,16 @@ class ProtectedEndpointSecurityTest {
             """;
 
         mockMvc.perform(post("/api/expenses")
-                .with(jwt())
+                .with(user("auth-test-user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(expensePayload))
             .andExpect(status().isCreated());
         mockMvc.perform(put("/api/incomes/{id}", RESOURCE_ID)
-                .with(jwt())
+                .with(user("auth-test-user"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(incomePayload))
             .andExpect(status().isOk());
-        mockMvc.perform(delete("/api/installment-groups/{id}", RESOURCE_ID).with(jwt()))
+        mockMvc.perform(delete("/api/installment-groups/{id}", RESOURCE_ID).with(user("auth-test-user")))
             .andExpect(status().isNoContent());
 
         verify(expenseService).create(org.mockito.ArgumentMatchers.any());
