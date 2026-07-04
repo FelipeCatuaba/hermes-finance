@@ -5,11 +5,11 @@ API Spring Boot do HERMES.
 ## Setup de variaveis
 
 1. Copie `.env.example` para `.env`
-2. Preencha `CLERK_JWKS_URI`, `CLERK_ISSUER_URI` e `CLERK_WEBHOOK_SECRET` (Clerk Dashboard)
+2. Preencha as variáveis de autenticação se estiver usando um provedor externo (ex.: `ISSUER_URI`, `JWKS_URI`) ou deixe vazias para uso de JWT local.
 3. Ajuste `ALLOWED_ORIGINS` para a URL do frontend (ex.: `http://localhost:5173`)
 4. Nunca versione `.env`
 
-`CLERK_SECRET_KEY` e opcional: so necessaria se o backend passar a chamar a API administrativa do Clerk.
+Se não estiver usando um provedor externo, deixe as variáveis de issuer/JWKS em branco e configure sua estratégia JWT local.
 
 ## Banco local com Docker
 
@@ -23,16 +23,11 @@ docker compose up -d
 mvn spring-boot:run
 ```
 
-## Clerk - checklist rapido
+## Autenticação
 
-| Onde | O que |
-|------|--------|
-| Clerk Dashboard -> Webhooks | Endpoint `POST https://<api>/api/webhooks/clerk`, eventos `user.created`, `user.updated`, `user.deleted` |
-| Clerk Dashboard -> Webhooks | Copiar **Signing Secret** -> `CLERK_WEBHOOK_SECRET` |
-| Clerk Dashboard -> API Keys | **Issuer** e **JWKS URL** -> `CLERK_ISSUER_URI` / `CLERK_JWKS_URI` |
-| Frontend | `pk_...` (publishable key) - nao vai no backend |
+O backend valida JWT (iss, exp/nbf) e pode ser configurado para usar um provedor externo através das variáveis de ambiente `ISSUER_URI` e `JWKS_URI`. Se utilizar webhooks de provedores externos, configure o segredo correspondente no `.env` e no dashboard do provedor.
 
-Em producao, webhooks sem `CLERK_WEBHOOK_SECRET` valido sao rejeitados.
+Em produção, webhooks sem assinatura/segredo válido devem ser rejeitados.
 
 ## Hardening de Seguranca
 
@@ -85,11 +80,7 @@ Para o CI/CD funcionar com OIDC:
   - `TF_GITHUB_REPO`
   - `TF_EXISTING_OIDC_PROVIDER_ARN`
   - `TF_AUTH_PROVIDER`
-  - `TF_CLERK_ISSUER_URI`
-  - `TF_CLERK_JWKS_URI`
-  - `TF_CLERK_WEBHOOK_REQUIRE_SIGNATURE`
-  - `TF_CLERK_WEBHOOK_MAX_TIMESTAMP_SKEW_SECONDS`
-  - `TF_CLERK_WEBHOOK_REPLAY_CACHE_TTL_SECONDS`
+  - (Removed Clerk-related Terraform variables; configure auth provider variables as needed)
   - `TF_ALLOWED_ORIGINS`
   - `TF_DB_POOL_NAME`
   - `TF_DB_MAX_POOL_SIZE`
