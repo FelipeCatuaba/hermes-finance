@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -37,11 +38,18 @@ import java.util.Map;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+    private static final String DEV_ONLY_JWT_SECRET = "dev-only-hermes-finance-secret-please-change";
+    private static final List<String> PRODUCTION_PROFILES = List.of("prod", "prd");
 
     @Value("${security.cors.allowed-origins:http://localhost:4200}")
     private String allowedOrigins;
-    @Value("${security.jwt.secret:dev-only-hermes-finance-secret-please-change}")
+    @Value("${security.jwt.secret:}")
     private String jwtSecret;
+    private final Environment environment;
+
+    public SecurityConfig(Environment environment) {
+        this.environment = environment;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -116,11 +124,33 @@ public class SecurityConfig {
 
     @Bean
     public SecretKey jwtSecretKey() {
-        byte[] bytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        String effectiveSecret = resolveJwtSecret();
+        byte[] bytes = effectiveSecret.getBytes(StandardCharsets.UTF_8);
         if (bytes.length < 32) {
             throw new IllegalStateException("security.jwt.secret deve ter pelo menos 32 bytes");
         }
         return new SecretKeySpec(bytes, "HmacSHA256");
+    }
+
+    private String resolveJwtSecret() {
+        boolean production = isProductionProfile();
+        String configuredSecret = jwtSecret == null ? "" : jwtSecret.trim();
+        if (configuredSecret.isBlank()) {
+            if (production) {
+                throw new IllegalStateException("JWT_SECRET deve ser configurado em producao");
+            }
+            return DEV_ONLY_JWT_SECRET;
+        }
+        if (production && DEV_ONLY_JWT_SECRET.equals(configuredSecret)) {
+            throw new IllegalStateException("JWT_SECRET de desenvolvimento nao pode ser usado em producao");
+        }
+        return configuredSecret;
+    }
+
+    private boolean isProductionProfile() {
+        return Arrays.stream(environment.getActiveProfiles())
+            .map(String::toLowerCase)
+            .anyMatch(PRODUCTION_PROFILES::contains);
     }
 
     @Bean
