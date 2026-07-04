@@ -36,6 +36,9 @@ public class UserRepository implements UserRepositoryPort {
             .addValue("externalAuthId", user.getExternalAuthId())
             .addValue("email", user.getEmail())
             .addValue("name", user.getName())
+            .addValue("passwordHash", user.getPasswordHash())
+            .addValue("role", user.getRole())
+            .addValue("active", user.isActive())
             .addValue("createdAt", createdAt)
             .addValue("updatedAt", now);
 
@@ -58,6 +61,25 @@ public class UserRepository implements UserRepositoryPort {
         MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("id", id);
         return jdbcTemplate.query(sql, params, userRowMapper).stream().findFirst();
+    }
+
+    public Optional<User> findByEmail(String email) {
+        String sql = nativeQueryCatalog.get("user.findByEmail");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("email", email);
+        return jdbcTemplate.query(sql, params, userRowMapper).stream().findFirst();
+    }
+
+    public void updateInternalCredentials(UUID id, String name, String passwordHash, String role, boolean active) {
+        String sql = nativeQueryCatalog.get("user.updateInternalCredentials");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("name", name)
+            .addValue("passwordHash", passwordHash)
+            .addValue("role", role)
+            .addValue("active", active)
+            .addValue("updatedAt", OffsetDateTime.now());
+        jdbcTemplate.update(sql, params);
     }
 
     public void updateProfile(String externalAuthId, String email, String name) {

@@ -11,6 +11,10 @@ public interface UserRepositoryPort {
 
     Optional<User> findById(UUID id);
 
+    Optional<User> findByEmail(String email);
+
+    void updateInternalCredentials(UUID id, String name, String passwordHash, String role, boolean active);
+
     void updateProfile(String externalAuthId, String email, String name);
 
     void anonymize(String externalAuthId);

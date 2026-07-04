@@ -30,16 +30,16 @@ class IpRateLimitFilterTest {
     }
 
     @Test
-    void shouldRateLimitWebhookPath() throws ServletException, IOException {
+    void shouldRateLimitAuthPath() throws ServletException, IOException {
         IpRateLimitFilter filter = new IpRateLimitFilter(1, 60);
 
-        MockHttpServletRequest req1 = new MockHttpServletRequest("POST", "/api/webhooks/clerk");
+        MockHttpServletRequest req1 = new MockHttpServletRequest("POST", "/api/auth/login");
         req1.setRemoteAddr("10.0.0.1");
         MockHttpServletResponse res1 = new MockHttpServletResponse();
         filter.doFilter(req1, res1, new MockFilterChain());
         assertEquals(200, res1.getStatus());
 
-        MockHttpServletRequest req2 = new MockHttpServletRequest("POST", "/api/webhooks/clerk");
+        MockHttpServletRequest req2 = new MockHttpServletRequest("POST", "/api/auth/login");
         req2.setRemoteAddr("10.0.0.1");
         MockHttpServletResponse res2 = new MockHttpServletResponse();
         filter.doFilter(req2, res2, new MockFilterChain());

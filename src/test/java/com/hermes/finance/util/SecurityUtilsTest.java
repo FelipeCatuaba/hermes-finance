@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SecurityUtilsTest {
+    private static final UUID USER_ID = UUID.fromString("2e746853-e27f-4891-b196-35f7a9d527f4");
 
     @Mock
     private UserRepository userRepository;
@@ -51,24 +53,35 @@ class SecurityUtilsTest {
     @Test
     void shouldReturnCurrentUserWhenSynchronized() {
         User user = new User();
-        user.setExternalAuthId("user_synced");
+        user.setId(USER_ID);
 
-        when(authIdentityProvider.getRequiredUserId()).thenReturn("user_synced");
-        when(userRepository.findByExternalAuthId("user_synced")).thenReturn(Optional.of(user));
+        when(authIdentityProvider.getRequiredUserId()).thenReturn(USER_ID.toString());
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
         assertEquals(user, securityUtils.getCurrentUser());
     }
 
     @Test
     void shouldThrowNotFoundWhenUserNotSynchronized() {
-        when(authIdentityProvider.getRequiredUserId()).thenReturn("user_missing");
-        when(userRepository.findByExternalAuthId("user_missing")).thenReturn(Optional.empty());
+        when(authIdentityProvider.getRequiredUserId()).thenReturn(USER_ID.toString());
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(
             ResponseStatusException.class,
             securityUtils::getCurrentUser
         );
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+    }
+
+    @Test
+    void shouldThrowUnauthorizedWhenTokenSubjectIsNotInternalUserId() {
+        when(authIdentityProvider.getRequiredUserId()).thenReturn("user_missing");
+
+        ResponseStatusException ex = assertThrows(
+            ResponseStatusException.class,
+            securityUtils::getCurrentUser
+        );
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
     }
 
     @Test

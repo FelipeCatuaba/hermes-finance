@@ -6,7 +6,7 @@ spring:
     activate:
       on-profile: prd
   datasource:
-    url: jdbc:postgresql://${SPRING_DATASOURCE_HOST}:5432/${SPRING_DATASOURCE_DB}
+    url: jdbc:postgresql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT:5432}/${SPRING_DATASOURCE_DB}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -30,31 +30,17 @@ spring:
     baseline-on-migrate: true
   jackson:
     time-zone: UTC
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${CLERK_ISSUER_URI:https://prepared-blowfish-68.clerk.accounts.dev}
-          jwk-set-uri: ${CLERK_JWKS_URI:https://prepared-blowfish-68.clerk.accounts.dev/.well-known/jwks.json}
-
-clerk:
-  webhook:
-    secret: ${CLERK_WEBHOOK_SECRET}
-    require-signature: ${CLERK_WEBHOOK_REQUIRE_SIGNATURE}
-    max-timestamp-skew-seconds: ${CLERK_WEBHOOK_MAX_TIMESTAMP_SKEW_SECONDS:300}
-    replay-cache-ttl-seconds: ${CLERK_WEBHOOK_REPLAY_CACHE_TTL_SECONDS:900}
 
 security:
   cors:
     allowed-origins: ${ALLOWED_ORIGINS}
   jwt:
-    allowed-audiences: ${JWT_ALLOWED_AUDIENCES}
+    secret: ${JWT_SECRET}
+    access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:900}
+    refresh-token-ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS:30}
   rate-limit:
     max-requests: ${RATE_LIMIT_MAX_REQUESTS}
     window-seconds: ${RATE_LIMIT_WINDOW_SECONDS}
-
-auth:
-  provider: ${AUTH_PROVIDER:clerk}
 
 management:
   endpoints:
